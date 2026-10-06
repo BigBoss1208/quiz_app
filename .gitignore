@@ -8,8 +8,7 @@ backend/.idea
 backend/*.iml
 backend/.mvn
 
-# Quan trọng — chứa mật khẩu MySQL, không được đẩy lên
-backend/src/main/resources/application.properties
+
 
 # Chung
 .DS_Store
