@@ -132,6 +132,26 @@ export interface CauHoiAdmin {
   danhSachDapAn: DapAnAdmin[];
 }
 
+export interface CauHoiCreateDTO {
+  noiDung: string;
+  dapAnA: string;
+  dapAnB: string;
+  dapAnC: string;
+  dapAnD: string;
+  dapAnDung: string; // "A" | "B" | "C" | "D"
+}
+
+export interface AiGenerateRequestDTO {
+  topic: string;
+  count: number;
+  doKho?: string;
+}
+
+export interface ImportExcelResultDTO {
+  soCauThanhCong: number;
+  danhSachLoi: string[];
+}
+
 // ===== Chủ đề =====
 
 export const layDanhSachChuDeThongKe = () =>
@@ -187,6 +207,75 @@ export const capNhatCauHoi = (
 export const xoaCauHoi = (id: number) =>
   request<void>(`/cauhoi/${id}`, {
     method: 'DELETE',
+  });
+
+// ===== Excel & AI Câu hỏi =====
+
+export const taiFileMauExcel = async () => {
+  const auth = layAuth();
+  const res = await fetch(`${BASE_URL}/cauhoi/template-excel`, {
+    headers: {
+      ...(auth ? { Authorization: `Bearer ${auth.token}` } : {}),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error('Không thể tải file mẫu Excel từ máy chủ.');
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'CauHoi_Template.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+};
+
+export const importCauHoiExcel = async (
+  chuDeId: number,
+  file: File
+): Promise<ImportExcelResultDTO> => {
+  const auth = layAuth();
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('chuDeId', String(chuDeId));
+
+  const res = await fetch(`${BASE_URL}/cauhoi/import-excel`, {
+    method: 'POST',
+    headers: {
+      ...(auth ? { Authorization: `Bearer ${auth.token}` } : {}),
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(text || `Upload file thất bại (Mã lỗi ${res.status}).`);
+  }
+
+  return res.json();
+};
+
+export const taoCauHoiBangAi = (
+  topic: string,
+  count: number,
+  doKho: string = 'Cơ bản'
+) =>
+  request<CauHoiCreateDTO[]>('/cauhoi/generate-ai', {
+    method: 'POST',
+    body: JSON.stringify({ topic, count, doKho }),
+  });
+
+export const luuHangLoatCauHoi = (
+  chuDeId: number,
+  danhSach: CauHoiCreateDTO[]
+) =>
+  request<number>(`/cauhoi/bulk?chuDeId=${chuDeId}`, {
+    method: 'POST',
+    body: JSON.stringify(danhSach),
   });
 
 // ===== Chơi Quiz =====

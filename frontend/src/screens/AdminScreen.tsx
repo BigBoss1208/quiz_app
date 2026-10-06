@@ -6,6 +6,8 @@ import {
   layDanhSachNguoiDung, layLichSuChoiCuaNguoiDung, layThongKeTongQuan,
   type CauHoiAdmin, type NguoiDungAdminDTO, type LichSuChoiDTO, type ThongKeTongQuanDTO,
 } from '../services/api';
+import ExcelImportCard from '../components/ExcelImportCard';
+import AiQuestionGenerator from '../components/AiQuestionGenerator';
 
 interface Props {
   topics: Topic[];
@@ -91,6 +93,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
 
   // ----- Câu hỏi -----
   const [selectedTopicId, setSelectedTopicId] = useState<string>('');
+  const [questionMode, setQuestionMode] = useState<'manual' | 'excel' | 'ai'>('manual');
   const [questions, setQuestions] = useState<CauHoiAdmin[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
 
@@ -224,7 +227,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
           <div className="p-5 border-b border-slate-100">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xl">🎮</span>
-              <span className="font-black text-slate-800 text-base" style={{ fontFamily: 'Baloo 2' }}>QuizVN</span>
+              <span className="font-black text-slate-800 text-base" style={{ fontFamily: 'Baloo 2' }}>QuangManh</span>
             </div>
             <span className="text-xs font-bold text-indigo-500 uppercase tracking-wider">Admin Panel</span>
           </div>
@@ -359,33 +362,123 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
             ) : (
             <div>
               <div className="bg-white rounded-2xl p-5 mb-4" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                <p className="font-bold text-slate-700 mb-3 text-sm">Chọn chủ đề</p>
-                <select value={selectedTopicId} onChange={(e) => setSelectedTopicId(e.target.value)}
-                  className="px-3 py-2 rounded-xl border border-slate-200 text-sm mb-4 w-full sm:w-64">
-                  {topics.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1 text-sm">Chọn chủ đề</label>
+                    <select
+                      value={selectedTopicId}
+                      onChange={(e) => setSelectedTopicId(e.target.value)}
+                      className="px-3 py-2 rounded-xl border border-slate-200 text-sm w-full sm:w-64 font-semibold text-slate-700 bg-white focus:outline-none focus:border-indigo-400"
+                    >
+                      {topics.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <p className="font-bold text-slate-700 mb-2 text-sm">Thêm câu hỏi mới</p>
-                <textarea value={qText} onChange={(e) => setQText(e.target.value)}
-                  placeholder="Nội dung câu hỏi" className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm mb-2" rows={2} />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                  {answers.map((a, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input type="radio" checked={correctIdx === i} onChange={() => setCorrectIdx(i)} />
-                      <input value={a} onChange={(e) => {
-                        const next = [...answers];
-                        next[i] = e.target.value;
-                        setAnswers(next);
-                      }} placeholder={`Đáp án ${String.fromCharCode(65 + i)}`}
-                        className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm" />
-                    </div>
-                  ))}
+                  {/* 3 nút chuyển Tab chế độ nhập câu hỏi */}
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setQuestionMode('manual')}
+                      className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        questionMode === 'manual'
+                          ? 'bg-white text-indigo-600 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-800'
+                      }`}
+                    >
+                      ✍️ Nhập thủ công
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuestionMode('excel')}
+                      className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        questionMode === 'excel'
+                          ? 'bg-white text-indigo-600 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-800'
+                      }`}
+                    >
+                      📥 Import Excel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuestionMode('ai')}
+                      className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                        questionMode === 'ai'
+                          ? 'bg-white text-indigo-600 shadow-sm'
+                          : 'text-slate-600 hover:text-slate-800'
+                      }`}
+                    >
+                      ✨ Tạo bằng AI
+                    </button>
+                  </div>
                 </div>
-                <button onClick={handleAddQuestion} disabled={savingQuestion}
-                  className="px-4 py-2 rounded-xl font-bold text-sm text-white" style={{ background: '#6C5CE7' }}>
-                  {savingQuestion ? 'Đang lưu...' : '+ Thêm câu hỏi'}
-                </button>
+
+                {/* Chế độ 1: Form nhập thủ công */}
+                {questionMode === 'manual' && (
+                  <div className="pt-3 border-t border-slate-100">
+                    <p className="font-bold text-slate-700 mb-2 text-sm">Thêm câu hỏi mới</p>
+                    <textarea
+                      value={qText}
+                      onChange={(e) => setQText(e.target.value)}
+                      placeholder="Nội dung câu hỏi"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm mb-2 focus:outline-none focus:border-indigo-400"
+                      rows={2}
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                      {answers.map((a, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input type="radio" checked={correctIdx === i} onChange={() => setCorrectIdx(i)} />
+                          <input
+                            value={a}
+                            onChange={(e) => {
+                              const next = [...answers];
+                              next[i] = e.target.value;
+                              setAnswers(next);
+                            }}
+                            placeholder={`Đáp án ${String.fromCharCode(65 + i)}`}
+                            className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-400"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddQuestion}
+                      disabled={savingQuestion}
+                      className="px-4 py-2 rounded-xl font-bold text-sm text-white cursor-pointer transition-opacity"
+                      style={{ background: '#6C5CE7', opacity: savingQuestion ? 0.7 : 1 }}
+                    >
+                      {savingQuestion ? 'Đang lưu...' : '+ Thêm câu hỏi'}
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {/* Chế độ 2: Import câu hỏi bằng file Excel */}
+              {questionMode === 'excel' && (
+                <ExcelImportCard
+                  chuDeId={Number(selectedTopicId)}
+                  onSuccess={() => {
+                    loadQuestions(selectedTopicId);
+                    onTopicsChanged();
+                  }}
+                />
+              )}
+
+              {/* Chế độ 3: Tạo câu hỏi tự động bằng AI */}
+              {questionMode === 'ai' && (
+                <AiQuestionGenerator
+                  chuDeId={Number(selectedTopicId)}
+                  defaultTopicName={topics.find((t) => t.id === selectedTopicId)?.name}
+                  onSuccess={() => {
+                    loadQuestions(selectedTopicId);
+                    onTopicsChanged();
+                  }}
+                />
+              )}
 
               {loadingQuestions ? (
                 <p className="text-slate-400 text-sm">Đang tải...</p>

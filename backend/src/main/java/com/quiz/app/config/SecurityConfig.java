@@ -57,8 +57,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/cauhoi/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/cauhoi/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/cauhoi/**").hasRole("ADMIN")
-                // Toàn bộ API dành riêng cho admin (danh sách người dùng, thống kê tổng quan)
+                // Toàn bộ API dành riêng cho admin (danh sách người dùng, thống kê tổng quan, quản lý câu hỏi admin)
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/admin/cauhoi/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/admin/cauhoi/template-excel").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

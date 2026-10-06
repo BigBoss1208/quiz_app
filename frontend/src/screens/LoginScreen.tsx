@@ -63,7 +63,7 @@ export default function LoginScreen({ onLogin, onSkip }: Props) {
             style={{ background: "linear-gradient(135deg, #6C5CE7, #4834D4)", boxShadow: "0 8px 30px rgba(108,92,231,0.5)" }}>
             🎮
           </div>
-          <h1 className="text-white font-black text-2xl" style={{ fontFamily: "Baloo 2" }}>QuizVN</h1>
+          <h1 className="text-white font-black text-2xl" style={{ fontFamily: "Baloo 2" }}>QuangManh</h1>
           <p className="text-white/40 text-sm font-semibold mt-0.5">Học mà chơi, chơi mà học!</p>
         </div>
 
