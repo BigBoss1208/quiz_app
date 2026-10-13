@@ -34,7 +34,7 @@ public class AiChatService {
     @Value("${seekai.api.key:}")
     private String apiKey;
 
-    @Value("${seekai.api.base-url:https://seekai.cc/v1}")
+    @Value("${seekai.api.base-url:}")
     private String apiBaseUrl;
 
     @Value("${seekai.api.model:}")
@@ -42,7 +42,8 @@ public class AiChatService {
 
     public boolean isSeekAiConfigured() {
         return apiKey != null && !apiKey.isBlank()
-                && model != null && !model.isBlank();
+                && model != null && !model.isBlank()
+                && apiBaseUrl != null && !apiBaseUrl.isBlank();
     }
 
     public ChatReply chat(ChatRequestDTO request) {

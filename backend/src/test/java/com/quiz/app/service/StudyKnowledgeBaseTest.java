@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StudyKnowledgeBaseTest {
@@ -52,6 +53,22 @@ class StudyKnowledgeBaseTest {
         ReflectionTestUtils.setField(service, "model", "");
 
         AiChatService.ChatReply reply = service.chat(new ChatRequestDTO("trả lời sai có bị dừng bài không", null));
+
+        assertEquals("KNOWLEDGE_BASE", reply.source());
+        assertTrue(reply.reply().contains("Không. Trả lời sai không kết thúc bài"));
+        assertEquals(null, reply.notice());
+    }
+
+    @Test
+    void missingSeekAiBaseUrlDoesNotUseAnUnverifiedDefault() {
+        AiChatService service = new AiChatService(new ObjectMapper(), knowledgeBase);
+        ReflectionTestUtils.setField(service, "apiKey", "unit-test-key");
+        ReflectionTestUtils.setField(service, "model", "unit-test-model");
+        ReflectionTestUtils.setField(service, "apiBaseUrl", "");
+
+        assertFalse(service.isSeekAiConfigured());
+        AiChatService.ChatReply reply = service.chat(
+                new ChatRequestDTO("trả lời sai có bị dừng bài không", null));
 
         assertEquals("KNOWLEDGE_BASE", reply.source());
         assertTrue(reply.reply().contains("Không. Trả lời sai không kết thúc bài"));
