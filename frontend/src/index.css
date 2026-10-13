@@ -875,3 +875,54 @@ body {
     transition: none;
   }
 }
+/* Quiz ManhNhom - Sidebar câu hỏi */
+
+.quiz-question-number {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #24213f;
+  color: #ffffff;
+  border: 2px solid rgba(167, 139, 250, 0.2);
+  border-radius: 13px;
+  font-size: 17px;
+  font-weight: 900;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.quiz-question-number.is-answered {
+  background: #087f70;
+  color: #ffffff;
+  border-color: #10b981;
+}
+
+.quiz-question-number.is-current {
+  background: #6c5ce7;
+  color: #ffffff;
+  border-color: #c4b5fd;
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.2);
+}
+
+.quiz-question-number.is-current.is-answered {
+  background: #087f70;
+  color: #ffffff;
+  border-color: #c4b5fd;
+  box-shadow: 0 0 14px rgba(167, 139, 250, 0.4);
+}
+
+/* Ẩn nhãn cũ nếu JSX vẫn còn */
+.quiz-question-number .quiz-question-status,
+.quiz-question-number .quiz-question-mark {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quiz-question-number {
+    transition: none;
+  }
+}

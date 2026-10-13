@@ -1,7 +1,15 @@
+
 import { useState, useEffect } from 'react';
 import type { Topic } from './data';
-import { layDanhSachChuDeThongKe, layAuth, xoaAuth, type AuthUser, type NopBaiResponseDTO } from './services/api';
+import {
+  layDanhSachChuDeThongKe,
+  layAuth,
+  xoaAuth,
+  type AuthUser,
+  type NopBaiResponseDTO,
+} from './services/api';
 import { mapChuDeToTopic } from './adapters';
+
 import HomeScreen from './screens/HomeScreen';
 import QuizScreen from './screens/QuizScreen';
 import ResultScreen from './screens/ResultScreen';
@@ -9,55 +17,95 @@ import LeaderboardScreen from './screens/LeaderboardScreen';
 import AdminScreen from './screens/AdminScreen';
 import LoginScreen from './screens/LoginScreen';
 
-type Screen = 'home' | 'quiz' | 'result' | 'leaderboard' | 'admin' | 'login';
+type Screen =
+  | 'home'
+  | 'quiz'
+  | 'result'
+  | 'leaderboard'
+  | 'admin'
+  | 'login';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
-  // Sau khi đăng nhập từ trang Admin, quay về đúng đích (admin) thay vì luôn về home
-  const [afterLoginGoTo, setAfterLoginGoTo] = useState<Screen>('home');
 
+  // Trang sẽ chuyển đến sau khi đăng nhập
+  const [afterLoginGoTo, setAfterLoginGoTo] =
+    useState<Screen>('home');
+
+  // Danh sách chủ đề
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loadingTopics, setLoadingTopics] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => layAuth());
+  // Người dùng hiện tại
+  const [currentUser, setCurrentUser] =
+    useState<AuthUser | null>(() => layAuth());
 
-  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
-  const [lastResult, setLastResult] = useState<NopBaiResponseDTO | null>(null);
+  // Dữ liệu làm bài
+  const [selectedTopic, setSelectedTopic] =
+    useState<Topic | null>(null);
+
+  const [lastResult, setLastResult] =
+    useState<NopBaiResponseDTO | null>(null);
+
+  // Hiệu ứng chúc mừng
+  const [celebrate, setCelebrate] = useState(false);
+
+  // Điểm kinh nghiệm và chuỗi hoàn thành
   const [xp, setXp] = useState(0);
   const [streak, setStreak] = useState(0);
 
+  // Tải danh sách chủ đề từ Backend
   const loadTopics = () => {
     setLoadingTopics(true);
     setLoadError(null);
+
     layDanhSachChuDeThongKe()
-      .then((data) => setTopics(data.map(mapChuDeToTopic)))
-      .catch(() => setLoadError('Không tải được danh sách chủ đề. Kiểm tra backend đã chạy chưa (http://localhost:8080).'))
-      .finally(() => setLoadingTopics(false));
+      .then((data) => {
+        setTopics(data.map(mapChuDeToTopic));
+      })
+      .catch(() => {
+        setLoadError(
+          'Không tải được danh sách chủ đề. Kiểm tra kết nối Backend.'
+        );
+      })
+      .finally(() => {
+        setLoadingTopics(false);
+      });
   };
 
   useEffect(() => {
     loadTopics();
   }, []);
 
+  // Bắt đầu bài Quiz mới
   const handleStartTopic = (topic: Topic) => {
+    setCelebrate(false);
+    setLastResult(null);
     setSelectedTopic(topic);
     setScreen('quiz');
   };
 
+  // Chỉ chạy khi Backend nộp bài thành công
   const handleFinishQuiz = (result: NopBaiResponseDTO) => {
     setLastResult(result);
-    setXp((x) => x + result.diemSo);
-    setStreak((s) => s + 1);
+
+    setXp((previous) => previous + result.diemSo);
+    setStreak((previous) => previous + 1);
+
+    // Kích hoạt tuyết giấy trên màn hình kết quả
+    setCelebrate(true);
     setScreen('result');
   };
 
+  // Quay lại trang chủ
   const handleBackToHome = () => {
+    setCelebrate(false);
     setScreen('home');
     loadTopics();
   };
 
-  // Bấm ⚙️ ở Home: chưa đăng nhập → sang login; đã đăng nhập nhưng không phải ADMIN → không cho vào; là ADMIN → vào thẳng
+  // Điều hướng đến Admin
   const handleGoAdmin = () => {
     if (currentUser?.vaiTro === 'ADMIN') {
       setScreen('admin');
@@ -67,40 +115,65 @@ export default function App() {
     }
   };
 
+  // Điều hướng đến đăng nhập
   const handleGoLogin = () => {
     setAfterLoginGoTo('home');
     setScreen('login');
   };
 
+  // Đăng nhập thành công
   const handleLoginSuccess = (user: AuthUser) => {
     setCurrentUser(user);
-    if (afterLoginGoTo === 'admin' && user.vaiTro !== 'ADMIN') {
-      // Đăng nhập thành công nhưng không phải admin — không cho vào trang admin
+
+    if (
+      afterLoginGoTo === 'admin' &&
+      user.vaiTro !== 'ADMIN'
+    ) {
       setScreen('home');
     } else {
       setScreen(afterLoginGoTo);
     }
   };
 
+  // Đăng xuất
   const handleLogout = () => {
     xoaAuth();
     setCurrentUser(null);
+    setCelebrate(false);
     setScreen('home');
   };
 
+  // Đang tải dữ liệu
   if (loadingTopics) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0f0c29' }}>
-        <p className="text-white/60 font-bold">Đang tải dữ liệu...</p>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: '#0f0c29' }}
+      >
+        <p className="text-white/60 font-bold">
+          Đang tải dữ liệu...
+        </p>
       </div>
     );
   }
 
+  // Lỗi tải dữ liệu
   if (loadError) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: '#0f0c29' }}>
-        <p className="text-white/70 font-bold text-center px-6">{loadError}</p>
-        <button onClick={loadTopics} className="px-4 py-2 rounded-xl font-bold text-white" style={{ background: '#6C5CE7' }}>
+      <div
+        className="min-h-screen flex flex-col items-center justify-center gap-4"
+        style={{ background: '#0f0c29' }}
+      >
+        <p className="text-white/70 font-bold text-center px-6">
+          {loadError}
+        </p>
+
+        <button
+          type="button"
+          onClick={loadTopics}
+          className="px-4 py-2 rounded-xl font-bold text-white"
+          style={{ background: '#6C5CE7' }}
+        >
           Thử lại
         </button>
       </div>
@@ -109,6 +182,7 @@ export default function App() {
 
   return (
     <>
+      {/* TRANG CHỦ */}
       {screen === 'home' && (
         <HomeScreen
           topics={topics}
@@ -122,9 +196,16 @@ export default function App() {
           streak={streak}
         />
       )}
+
+      {/* ĐĂNG NHẬP */}
       {screen === 'login' && (
-        <LoginScreen onLogin={handleLoginSuccess} onSkip={() => setScreen('home')} />
+        <LoginScreen
+          onLogin={handleLoginSuccess}
+          onSkip={() => setScreen('home')}
+        />
       )}
+
+      {/* LÀM BÀI QUIZ */}
       {screen === 'quiz' && selectedTopic && (
         <QuizScreen
           topic={selectedTopic}
@@ -133,20 +214,42 @@ export default function App() {
           onBack={handleBackToHome}
         />
       )}
+
+      {/* KẾT QUẢ VÀ HIỆU ỨNG CHÚC MỪNG */}
       {screen === 'result' && selectedTopic && lastResult && (
         <ResultScreen
           topicId={selectedTopic.id}
           result={lastResult}
-          onReplay={() => setScreen('quiz')}
+          celebrate={celebrate}
+          onReplay={() => {
+            setCelebrate(false);
+            setLastResult(null);
+            setScreen('quiz');
+          }}
           onHome={handleBackToHome}
-          onLeaderboard={() => setScreen('leaderboard')}
+          onLeaderboard={() => {
+            setCelebrate(false);
+            setScreen('leaderboard');
+          }}
         />
       )}
+
+      {/* BẢNG XẾP HẠNG */}
       {screen === 'leaderboard' && (
-        <LeaderboardScreen topics={topics} onBack={handleBackToHome} />
+        <LeaderboardScreen
+          topics={topics}
+          onBack={handleBackToHome}
+        />
       )}
+
+      {/* QUẢN TRỊ */}
       {screen === 'admin' && currentUser?.vaiTro === 'ADMIN' && (
-        <AdminScreen topics={topics} onBack={handleBackToHome} onTopicsChanged={loadTopics} onLogout={handleLogout} />
+        <AdminScreen
+          topics={topics}
+          onBack={handleBackToHome}
+          onTopicsChanged={loadTopics}
+          onLogout={handleLogout}
+        />
       )}
     </>
   );
