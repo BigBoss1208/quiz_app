@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { Topic } from '../data';
 import { layTenNguoiChoi } from '../data';
 import { layCauHoiDeChoi, nopBai, type AuthUser, type NopBaiResponseDTO } from '../services/api';
@@ -12,13 +12,23 @@ interface Props {
 }
 
 const ANSWER_COLORS = [
-  { bg: '#FF6B6B', shadow: 'rgba(255,107,107,0.4)', label: 'A' },
-  { bg: '#4834D4', shadow: 'rgba(72,52,212,0.4)', label: 'B' },
-  { bg: '#FFC107', shadow: 'rgba(255,193,7,0.4)', label: 'C' },
-  { bg: '#00D9A5', shadow: 'rgba(0,217,165,0.4)', label: 'D' },
+  { accent: '#F43F5E', pastel: '#FFF1F2' },
+  { accent: '#2583F6', pastel: '#EFF6FF' },
+  { accent: '#10B981', pastel: '#ECFDF5' },
+  { accent: '#EAB308', pastel: '#FEFCE8' },
 ];
 
 const TIMER_SECONDS = 20;
+
+function answerLetter(index: number) {
+  let value = index;
+  let label = '';
+  do {
+    label = String.fromCharCode(65 + (value % 26)) + label;
+    value = Math.floor(value / 26) - 1;
+  } while (value >= 0);
+  return label;
+}
 
 function CircleTimer({ seconds }: { seconds: number }) {
   const circumference = 2 * Math.PI * 22;
@@ -45,6 +55,7 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [remainingByQuestion, setRemainingByQuestion] = useState<Record<number, number>>({});
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [startTime] = useState(() => Date.now());
   const submitting = useRef(false);
   const timeoutSubmissionAttempted = useRef(false);
@@ -168,96 +179,132 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
   if (!question) return null;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(160deg, #0f0c29, #1a1048 60%, #24243e)' }}>
-      <div className="relative z-10 w-full max-w-3xl mx-auto px-4 pt-4 pb-8">
-        <header className="flex items-center justify-between gap-3 mb-4">
-          <button onClick={onBack} className="btn-bounce text-white/75 hover:text-white font-bold text-sm px-3 py-2 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.08)' }}>← Thoát</button>
-          <div className="text-center min-w-0">
-            <p className="text-white font-bold truncate">{topic.emoji} {topic.name}</p>
-            <p className="text-white/55 text-xs">{answeredCount}/{questions.length} câu đã trả lời</p>
+    <div className="quiz-page">
+      <div className="quiz-layout">
+        <header className="quiz-header">
+          <button type="button" onClick={onBack} className="quiz-exit">
+            <span aria-hidden="true">←</span> Thoát
+          </button>
+          <div className="quiz-heading">
+            <p className="quiz-topic">{topic.emoji} {topic.name}</p>
+            <p className="quiz-answered">{answeredCount} / {questions.length} câu đã trả lời</p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline text-white/50 text-xs">Mỗi câu 20 giây</span>
+          <div className="quiz-clock" aria-label={`Còn ${remainingSeconds} giây`}>
+            <span className="quiz-clock-label">CÒN LẠI</span>
             <CircleTimer seconds={remainingSeconds} />
+            <span className="quiz-clock-unit">giây</span>
+          </div>
+          <div className="quiz-progress">
+            <div className="quiz-progress-copy">
+              <span>Tiến độ bài làm</span>
+              <strong>Câu {current + 1} / {questions.length}</strong>
+            </div>
+            <div
+              className="quiz-progress-track"
+              role="progressbar"
+              aria-label="Tiến độ bài làm"
+              aria-valuemin={0}
+              aria-valuemax={questions.length}
+              aria-valuenow={current + 1}
+            >
+              <div className="quiz-progress-fill" style={{ width: `${((current + 1) / questions.length) * 100}%` }} />
+            </div>
           </div>
         </header>
 
-        <div className="mb-4">
-          <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
-            <div className="h-full rounded-full transition-all duration-300"
-              style={{ width: `${((current + 1) / questions.length) * 100}%`, background: 'linear-gradient(90deg, #6C5CE7, #00D9A5)' }} />
-          </div>
-          <p className="text-white/65 text-sm font-bold mt-2">Câu {current + 1}/{questions.length}</p>
-        </div>
-
-        <nav aria-label="Điều hướng câu hỏi" className="grid grid-cols-[repeat(auto-fill,minmax(2.5rem,1fr))] gap-2 mb-5">
-          {questions.map((item, index) => {
-            const isAnswered = answers[item.backendId] !== undefined;
-            const isCurrent = index === current;
-            return (
-              <button key={item.backendId} type="button" onClick={() => setCurrent(index)}
-                aria-label={`Câu ${index + 1}${isAnswered ? ', đã trả lời' : ', chưa trả lời'}`}
-                aria-current={isCurrent ? 'step' : undefined}
-                className="h-10 rounded-xl font-extrabold text-sm transition"
-                style={{
-                  background: isCurrent ? '#6C5CE7' : isAnswered ? 'rgba(0,217,165,0.18)' : 'rgba(255,255,255,0.08)',
-                  color: isCurrent ? 'white' : isAnswered ? '#82f0d1' : 'rgba(255,255,255,0.62)',
-                  border: `1px solid ${isCurrent ? '#a29bfe' : isAnswered ? 'rgba(0,217,165,0.45)' : 'rgba(255,255,255,0.12)'}`,
-                }}>
-                {index + 1}{isAnswered ? ' ✓' : ''}
-              </button>
-            );
-          })}
-        </nav>
-
-        {error && <p role="alert" className="mb-4 rounded-xl px-4 py-3 text-sm font-bold text-red-100 bg-red-500/20">{error}</p>}
-
-        <section className="rounded-3xl p-5 sm:p-7 mb-5"
-          style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 16px 45px rgba(0,0,0,0.2)' }}>
-          {question.image && <img src={question.image} alt="" className="w-full max-h-56 object-contain rounded-xl mb-4" />}
-          <h1 className="text-white font-extrabold text-xl sm:text-2xl text-center leading-snug">{question.text}</h1>
-        </section>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {question.answers.map((answer, index) => {
-            const answerId = question.answerIds[index];
-            const color = ANSWER_COLORS[index % ANSWER_COLORS.length];
-            const isSelected = answerId === selectedAnswerId;
-            return (
-              <button key={answerId} type="button" onClick={() => selectAnswer(answerId)}
-                aria-pressed={isSelected}
-                className="answer-btn min-h-20 rounded-2xl p-4 text-left"
-                style={{
-                  background: isSelected ? color.bg : 'rgba(255,255,255,0.08)',
-                  boxShadow: isSelected ? `0 6px 20px ${color.shadow}` : 'none',
-                  border: `2px solid ${isSelected ? 'white' : 'rgba(255,255,255,0.12)'}`,
-                }}>
-                <span className="flex items-start gap-3">
-                  <span className="w-8 h-8 shrink-0 rounded-xl bg-white/20 flex items-center justify-center text-white font-black text-sm">
-                    {ANSWER_COLORS[index % ANSWER_COLORS.length].label}
-                  </span>
-                  <span className="text-white font-bold text-sm sm:text-base leading-snug pt-1">{answer}</span>
-                  {isSelected && <span className="ml-auto text-white font-black" aria-hidden="true">✓</span>}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 mt-6">
-          <button type="button" onClick={() => setCurrent((index) => Math.max(0, index - 1))} disabled={current === 0}
-            className="btn-bounce py-3 rounded-xl font-extrabold text-white disabled:opacity-35"
-            style={{ background: 'rgba(255,255,255,0.1)' }}>← Câu trước</button>
-          <button type="button" onClick={() => setCurrent((index) => Math.min(questions.length - 1, index + 1))}
-            disabled={current === questions.length - 1}
-            className="btn-bounce py-3 rounded-xl font-extrabold text-white disabled:opacity-35"
-            style={{ background: 'rgba(255,255,255,0.1)' }}>Câu tiếp theo →</button>
-          <button type="button" onClick={() => void submitQuiz()}
-            className="btn-bounce py-3 px-6 rounded-xl font-extrabold text-white"
-            style={{ background: 'linear-gradient(90deg, #6C5CE7, #4834D4)', boxShadow: '0 8px 25px rgba(108,92,231,0.35)' }}>
-            Nộp bài
+        <div className="quiz-mobile-nav">
+          <button type="button" className="quiz-mobile-nav-toggle"
+            onClick={() => setMobileNavigationOpen((isOpen) => !isOpen)}
+            aria-expanded={mobileNavigationOpen} aria-controls="quiz-question-navigation">
+            <span>{mobileNavigationOpen ? 'Ẩn danh sách câu' : 'Điều hướng câu hỏi'}</span>
+            <span className="quiz-mobile-nav-count">{answeredCount}/{questions.length} đã trả lời</span>
+            <span aria-hidden="true">{mobileNavigationOpen ? '⌃' : '⌄'}</span>
           </button>
+        </div>
+
+        <div className="quiz-workspace">
+          <aside id="quiz-question-navigation" className={`quiz-sidebar${mobileNavigationOpen ? ' is-open' : ''}`}>
+            <div className="quiz-sidebar-heading">
+              <div>
+                <h2>Câu hỏi</h2>
+                <p>Chọn câu để di chuyển</p>
+              </div>
+              <span>{answeredCount}/{questions.length}</span>
+            </div>
+            <nav aria-label="Điều hướng câu hỏi" className="quiz-question-list">
+              {questions.map((item, index) => {
+                const isAnswered = answers[item.backendId] !== undefined;
+                const isCurrent = index === current;
+                return (
+                  <button key={item.backendId} type="button"
+                    onClick={() => { setCurrent(index); setMobileNavigationOpen(false); }}
+                    aria-label={`Câu ${index + 1}${isAnswered ? ', đã trả lời' : ', chưa trả lời'}`}
+                    aria-current={isCurrent ? 'step' : undefined}
+                    className={`quiz-question-number${isCurrent ? ' is-current' : ''}${isAnswered ? ' is-answered' : ''}`}>
+                    <span>{index + 1}</span>
+                    <span className="quiz-question-status">{isAnswered ? 'Đã trả lời' : 'Chưa trả lời'}</span>
+                    <span className="quiz-question-mark" aria-hidden="true">{isAnswered ? '✓' : '–'}</span>
+                  </button>
+                );
+              })}
+            </nav>
+            <div className="quiz-sidebar-legend">
+              <span><i className="is-current" /> Câu hiện tại</span>
+              <span><i className="is-answered" /> Đã trả lời</span>
+              <span><i className="is-unanswered" /> Chưa trả lời</span>
+            </div>
+          </aside>
+
+          <main className="quiz-main">
+            {error && <p role="alert" className="quiz-error">{error}</p>}
+
+            <section className="quiz-question-card" aria-labelledby="quiz-question-title">
+              <div className="quiz-question-card-top">
+                <span className="quiz-question-chip">CÂU {current + 1}</span>
+                <span className="quiz-question-total">/{questions.length}</span>
+              </div>
+              {question.image && <img src={question.image} alt="" className="quiz-question-image" />}
+              <h1 id="quiz-question-title">{question.text}</h1>
+              <p className="quiz-select-hint">Chọn một đáp án phù hợp nhất</p>
+            </section>
+
+            <section className="quiz-answers" aria-label="Các phương án trả lời">
+              {question.answers.map((answer, index) => {
+                const answerId = question.answerIds[index];
+                const color = ANSWER_COLORS[index % ANSWER_COLORS.length];
+                const isSelected = answerId === selectedAnswerId;
+                return (
+                  <button key={answerId} type="button" onClick={() => selectAnswer(answerId)}
+                    aria-pressed={isSelected}
+                    className={`quiz-answer${isSelected ? ' is-selected' : ''}`}
+                    style={{
+                      '--answer-accent': color.accent,
+                      '--answer-pastel': color.pastel,
+                    } as CSSProperties}>
+                    <span className="quiz-answer-letter">{answerLetter(index)}</span>
+                    <span className="quiz-answer-text">{answer}</span>
+                    <span className="quiz-answer-radio" aria-hidden="true">{isSelected ? '✓' : ''}</span>
+                  </button>
+                );
+              })}
+            </section>
+
+            <div className="quiz-navigation">
+              <button type="button" onClick={() => setCurrent((index) => Math.max(0, index - 1))} disabled={current === 0}
+                className="quiz-nav-button quiz-nav-secondary">
+                <span aria-hidden="true">←</span><span>Câu trước</span>
+              </button>
+              <button type="button" onClick={() => setCurrent((index) => Math.min(questions.length - 1, index + 1))}
+                disabled={current === questions.length - 1}
+                className="quiz-nav-button quiz-nav-secondary">
+                <span>Câu tiếp theo</span><span aria-hidden="true">→</span>
+              </button>
+              <button type="button" onClick={() => void submitQuiz()}
+                className="quiz-nav-button quiz-submit">
+                Nộp bài <span aria-hidden="true">↗</span>
+              </button>
+            </div>
+          </main>
         </div>
       </div>
     </div>
