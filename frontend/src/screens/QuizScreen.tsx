@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Topic } from '../data';
 import { layTenNguoiChoi } from '../data';
 import { layCauHoiDeChoi, nopBai, type AuthUser, type NopBaiResponseDTO } from '../services/api';
@@ -10,13 +10,6 @@ interface Props {
   onFinish: (result: NopBaiResponseDTO) => void;
   onBack: () => void;
 }
-
-const ANSWER_COLORS = [
-  { accent: '#F43F5E', pastel: '#FFF1F2' },
-  { accent: '#2583F6', pastel: '#EFF6FF' },
-  { accent: '#10B981', pastel: '#ECFDF5' },
-  { accent: '#EAB308', pastel: '#FEFCE8' },
-];
 
 const TIMER_SECONDS = 20;
 
@@ -271,16 +264,11 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
             <section className="quiz-answers" aria-label="Các phương án trả lời">
               {question.answers.map((answer, index) => {
                 const answerId = question.answerIds[index];
-                const color = ANSWER_COLORS[index % ANSWER_COLORS.length];
                 const isSelected = answerId === selectedAnswerId;
                 return (
                   <button key={answerId} type="button" onClick={() => selectAnswer(answerId)}
                     aria-pressed={isSelected}
-                    className={`quiz-answer${isSelected ? ' is-selected' : ''}`}
-                    style={{
-                      '--answer-accent': color.accent,
-                      '--answer-pastel': color.pastel,
-                    } as CSSProperties}>
+                    className={`quiz-answer${isSelected ? ' is-selected' : ''}`}>
                     <span className="quiz-answer-letter">{answerLetter(index)}</span>
                     <span className="quiz-answer-text">{answer}</span>
                     <span className="quiz-answer-radio" aria-hidden="true">{isSelected ? '✓' : ''}</span>

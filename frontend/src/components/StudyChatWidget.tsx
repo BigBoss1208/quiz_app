@@ -80,22 +80,26 @@ export default function StudyChatWidget({ inline = false, context = null, onClea
     <section className={inline
       ? 'mt-3 w-full rounded-2xl overflow-hidden'
       : 'fixed bottom-20 right-4 z-50 w-[min(24rem,calc(100vw-2rem))] rounded-2xl overflow-hidden shadow-2xl'}
-      style={{ background: '#171331', border: '1px solid rgba(255,255,255,0.15)' }}
+      style={{ background: '#13102d', border: '1px solid rgba(167,139,250,0.2)', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}
       aria-label="Trợ lý AI học tập">
       <header className="flex items-center justify-between gap-3 px-4 py-3"
-        style={{ background: 'rgba(108,92,231,0.22)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-        <div>
-          <h2 className="text-white font-extrabold">Trợ lý học tập AI</h2>
-          <p className="text-white/60 text-xs">
-            {seekAiConfigured === true
-              ? 'Ưu tiên SeekAI · có kho hướng dẫn dự phòng'
-              : seekAiConfigured === false
-                ? 'Kho hướng dẫn Quiz · chưa cấu hình SeekAI'
-                : 'Đang kiểm tra cấu hình...'}
-          </p>
+        style={{ background: 'rgba(108,92,231,0.22)', borderBottom: '1px solid rgba(167,139,250,0.15)' }}>
+        <div className="flex items-center gap-2">
+          <span className="text-lg">✨</span>
+          <div>
+            <h2 className="text-white font-extrabold text-sm">Trợ lý AI <span style={{ color: '#a78bfa' }}>ManhNhom</span></h2>
+            <p className="text-white/50 text-xs">
+              {seekAiConfigured === true
+                ? 'Ưu tiên SeekAI · có kho hướng dẫn dự phòng'
+                : seekAiConfigured === false
+                  ? 'Kho hướng dẫn Quiz · chưa cấu hình SeekAI'
+                  : 'Đang kiểm tra cấu hình...'}
+            </p>
+          </div>
         </div>
         <button type="button" onClick={() => { setOpen(false); onClearContext?.(); }}
-          aria-label="Đóng chatbot" className="text-white/70 hover:text-white text-xl">×</button>
+          aria-label="Đóng chatbot" className="text-white/50 hover:text-white text-xl w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+          style={{ background: 'rgba(255,255,255,0.07)' }}>×</button>
       </header>
 
       {context && (
@@ -171,12 +175,20 @@ export default function StudyChatWidget({ inline = false, context = null, onClea
 
   return (
     <div className={inline ? 'w-full' : 'fixed bottom-4 right-4 z-50'}>
-      <button type="button" onClick={() => setOpen((value) => !value)}
-        className="btn-bounce rounded-full px-4 py-3 text-white font-extrabold shadow-xl"
-        style={{ background: 'linear-gradient(90deg, #6C5CE7, #4834D4)' }}
-        aria-expanded={open}>
-        {open ? 'Đóng trợ lý' : '✨ Hỏi trợ lý AI'}
-      </button>
+      {!inline && (
+        <button type="button" onClick={() => setOpen((value) => !value)}
+          className="btn-bounce flex items-center gap-2 rounded-2xl px-4 py-3 text-white font-extrabold shadow-xl"
+          style={{
+            background: open ? 'rgba(108,92,231,0.8)' : 'linear-gradient(135deg, #6C5CE7, #4834D4)',
+            boxShadow: open ? '0 4px 16px rgba(108,92,231,0.3)' : '0 8px 30px rgba(108,92,231,0.5)',
+            border: '1px solid rgba(167,139,250,0.3)',
+          }}
+          aria-expanded={open}
+          aria-label={open ? 'Đóng chatbot AI' : 'Mở chatbot AI'}>
+          <span>{open ? '×' : '✨'}</span>
+          <span className="text-sm">{open ? 'Đóng' : 'Hỏi AI'}</span>
+        </button>
+      )}
       {panel}
     </div>
   );

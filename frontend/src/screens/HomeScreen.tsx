@@ -104,7 +104,7 @@ export default function HomeScreen({ topics, currentUser, onStart, onLeaderboard
         <header className="flex items-center justify-between py-5">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🎮</span>
-            <span className="text-white font-extrabold text-xl" style={{ fontFamily: 'Baloo 2' }}>QuangManh</span>
+            <span className="text-white font-extrabold text-xl" style={{ fontFamily: 'Baloo 2' }}>Quiz <span style={{ color: '#a78bfa' }}>ManhNhom</span></span>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={onLeaderboard}
