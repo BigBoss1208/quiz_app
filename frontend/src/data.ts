@@ -9,6 +9,15 @@ export interface Topic {
   gradient: string;
   shadow: string;
   category: string;
+  choPhepXemDapAn?: boolean;
+}
+
+export interface AnswerReview {
+  questionText: string;
+  options: string[];
+  selectedAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
 }
 
 export interface Question {

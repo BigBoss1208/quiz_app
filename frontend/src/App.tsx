@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Topic } from './data';
-import { layDanhSachChuDeThongKe, layAuth, xoaAuth, type AuthUser } from './services/api';
+import { layDanhSachChuDeThongKe, layAuth, xoaAuth, type AuthUser, type NopBaiResponseDTO } from './services/api';
 import { mapChuDeToTopic } from './adapters';
 import HomeScreen from './screens/HomeScreen';
 import QuizScreen from './screens/QuizScreen';
@@ -23,10 +23,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => layAuth());
 
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
-  const [lastScore, setLastScore] = useState(0);
-  const [lastCorrect, setLastCorrect] = useState(0);
-  const [lastTotal, setLastTotal] = useState(0);
-  const [lastTime, setLastTime] = useState(0);
+  const [lastResult, setLastResult] = useState<NopBaiResponseDTO | null>(null);
   const [xp, setXp] = useState(0);
   const [streak, setStreak] = useState(0);
 
@@ -48,12 +45,9 @@ export default function App() {
     setScreen('quiz');
   };
 
-  const handleFinishQuiz = (score: number, correct: number, total: number, time: number) => {
-    setLastScore(score);
-    setLastCorrect(correct);
-    setLastTotal(total);
-    setLastTime(time);
-    setXp((x) => x + score);
+  const handleFinishQuiz = (result: NopBaiResponseDTO) => {
+    setLastResult(result);
+    setXp((x) => x + result.diemSo);
     setStreak((s) => s + 1);
     setScreen('result');
   };
@@ -139,13 +133,10 @@ export default function App() {
           onBack={handleBackToHome}
         />
       )}
-      {screen === 'result' && selectedTopic && (
+      {screen === 'result' && selectedTopic && lastResult && (
         <ResultScreen
           topicId={selectedTopic.id}
-          score={lastScore}
-          correct={lastCorrect}
-          total={lastTotal}
-          time={lastTime}
+          result={lastResult}
           onReplay={() => setScreen('quiz')}
           onHome={handleBackToHome}
           onLeaderboard={() => setScreen('leaderboard')}

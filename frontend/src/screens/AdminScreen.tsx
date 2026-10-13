@@ -32,21 +32,30 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicDesc, setNewTopicDesc] = useState('');
   const [newTopicCategory, setNewTopicCategory] = useState('Khoa học');
+  const [newChoPhepXemDapAn, setNewChoPhepXemDapAn] = useState(false);
   const [savingTopic, setSavingTopic] = useState(false);
 
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editCategory, setEditCategory] = useState('Khoa học');
+  const [editChoPhepXemDapAn, setEditChoPhepXemDapAn] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
 
   const handleAddTopic = async () => {
     if (!newTopicName.trim()) return;
     setSavingTopic(true);
     try {
-      await themChuDe({ tenChuDe: newTopicName.trim(), moTa: newTopicDesc.trim(), doKho: 'DE', danhMuc: newTopicCategory });
+      await themChuDe({
+        tenChuDe: newTopicName.trim(),
+        moTa: newTopicDesc.trim(),
+        doKho: 'DE',
+        danhMuc: newTopicCategory,
+        choPhepXemDapAn: newChoPhepXemDapAn,
+      });
       setNewTopicName('');
       setNewTopicDesc('');
+      setNewChoPhepXemDapAn(false);
       onTopicsChanged();
     } catch {
       alert('Thêm chủ đề thất bại. Kiểm tra backend.');

@@ -41,6 +41,9 @@ public class ChuDeService {
         chuDe.setMoTa(duLieu.getMoTa());
         chuDe.setDoKho(duLieu.getDoKho());
         chuDe.setDanhMuc(duLieu.getDanhMuc());
+        if (duLieu.getChoPhepXemDapAn() != null) {
+            chuDe.setChoPhepXemDapAn(duLieu.getChoPhepXemDapAn());
+        }
         return chuDeRepository.save(chuDe);
     }
 
@@ -77,6 +80,7 @@ public class ChuDeService {
                 chuDe.getMoTa(),
                 chuDe.getDoKho(),
                 chuDe.getDanhMuc(),
+                chuDe.getChoPhepXemDapAn() != null ? chuDe.getChoPhepXemDapAn() : false,
                 soCauHoi,
                 luotChoi,
                 topDiem

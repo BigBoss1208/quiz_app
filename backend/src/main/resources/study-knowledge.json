@@ -1,0 +1,226 @@
+[
+  {
+    "id": "about",
+    "category": "Giới thiệu",
+    "question": "Quiz là website gì?",
+    "aliases": ["ứng dụng quiz là gì", "website này dùng để làm gì", "giới thiệu quiz"],
+    "answer": "Quiz là ứng dụng học tập và luyện tập bằng các câu hỏi trắc nghiệm theo chủ đề. Bạn có thể chọn chủ đề, làm bài, nộp bài và xem kết quả cùng phần đáp án."
+  },
+  {
+    "id": "register",
+    "category": "Tài khoản",
+    "question": "Tạo tài khoản như thế nào?",
+    "aliases": ["đăng ký tài khoản", "tạo user mới", "làm sao đăng ký"],
+    "answer": "Chọn Đăng nhập trên trang chủ, sau đó chọn chức năng đăng ký và điền tên đăng nhập, mật khẩu cùng họ tên. Nếu màn hình hiện tại không có lựa chọn đăng ký, hãy kiểm tra backend hoặc liên hệ quản trị viên."
+  },
+  {
+    "id": "login",
+    "category": "Tài khoản",
+    "question": "Đăng nhập như thế nào?",
+    "aliases": ["làm sao đăng nhập", "vào tài khoản", "không đăng nhập được"],
+    "answer": "Trên trang chủ, nhấn Đăng nhập rồi nhập tên đăng nhập và mật khẩu đã đăng ký. Nếu không đăng nhập được, kiểm tra thông tin, kết nối backend và thử lại."
+  },
+  {
+    "id": "logout",
+    "category": "Tài khoản",
+    "question": "Đăng xuất ở đâu?",
+    "aliases": ["làm sao đăng xuất", "thoát tài khoản", "logout"],
+    "answer": "Khi đã đăng nhập, nhấn nút tên tài khoản ở góc trên trang chủ để đăng xuất."
+  },
+  {
+    "id": "account",
+    "category": "Tài khoản",
+    "question": "Tôi có thể đổi thông tin tài khoản ở đâu?",
+    "aliases": ["đổi mật khẩu", "sửa hồ sơ", "quản lý tài khoản"],
+    "answer": "Phiên bản hiện tại chưa có trang đổi mật khẩu hoặc chỉnh sửa hồ sơ người dùng. Bạn có thể đăng xuất hoặc liên hệ quản trị viên nếu cần hỗ trợ tài khoản."
+  },
+  {
+    "id": "topics",
+    "category": "Chủ đề",
+    "question": "Làm thế nào để tìm bài Quiz?",
+    "aliases": ["tìm kiếm bài quiz", "tìm chủ đề", "lọc câu đố"],
+    "answer": "Trang chủ hiển thị các chủ đề Quiz hiện có. Dùng các nút danh mục để lọc chủ đề; phiên bản hiện tại chưa có ô tìm kiếm theo từ khóa."
+  },
+  {
+    "id": "start",
+    "category": "Làm bài",
+    "question": "Bắt đầu làm Quiz như thế nào?",
+    "aliases": ["vào làm bài", "chọn bài quiz", "mở chủ đề"],
+    "answer": "Trên trang chủ, chọn thẻ chủ đề muốn học rồi nhấn Bắt đầu. Câu hỏi được tải từ backend."
+  },
+  {
+    "id": "choose-answer",
+    "category": "Làm bài",
+    "question": "Chọn đáp án bằng cách nào?",
+    "aliases": ["trả lời câu hỏi", "chọn phương án", "đánh dấu đáp án"],
+    "answer": "Nhấn vào một phương án để chọn. Lựa chọn được giữ lại khi bạn chuyển câu và có thể đổi trước khi nộp bài."
+  },
+  {
+    "id": "wrong-answer",
+    "category": "Làm bài",
+    "question": "Trả lời sai có bị dừng bài không?",
+    "aliases": ["sai có bị loại không", "trả lời sai thì sao", "sai một câu có chơi tiếp được không"],
+    "answer": "Không. Trả lời sai không kết thúc bài và không tự động nộp. Bạn có thể tiếp tục làm đến câu cuối."
+  },
+  {
+    "id": "navigation",
+    "category": "Làm bài",
+    "question": "Chuyển sang câu khác như thế nào?",
+    "aliases": ["câu tiếp theo ở đâu", "điều hướng câu hỏi", "bấm câu trước"],
+    "answer": "Dùng nút Câu trước hoặc Câu tiếp theo, hoặc chọn số câu trong bảng điều hướng. Câu đã chọn đáp án và câu chưa trả lời được đánh dấu khác nhau."
+  },
+  {
+    "id": "change-answer",
+    "category": "Làm bài",
+    "question": "Có thể đổi đáp án đã chọn không?",
+    "aliases": ["sửa câu trả lời", "thay đổi lựa chọn", "đổi đáp án trước khi nộp"],
+    "answer": "Có. Quay lại câu bằng Câu trước hoặc bảng điều hướng, rồi chọn phương án mới. Đáp án cuối cùng trước khi nộp mới được chấm."
+  },
+  {
+    "id": "skip",
+    "category": "Làm bài",
+    "question": "Có thể bỏ qua câu hỏi không?",
+    "aliases": ["không trả lời câu hỏi", "để trống câu", "skip câu"],
+    "answer": "Có. Bạn có thể chuyển qua câu khác và quay lại sau. Nếu nộp khi câu vẫn trống, câu đó được tính là chưa trả lời."
+  },
+  {
+    "id": "timer",
+    "category": "Làm bài",
+    "question": "Mỗi câu có bao nhiêu thời gian?",
+    "aliases": ["thời gian trả lời", "đồng hồ câu hỏi", "hết giờ thì sao"],
+    "answer": "Mỗi câu hiện có bộ đếm 20 giây. Hết giờ ở câu chưa trả lời thì hệ thống chuyển tiếp; nếu hết giờ ở câu cuối, bài được tự nộp."
+  },
+  {
+    "id": "submit",
+    "category": "Nộp bài",
+    "question": "Nộp bài Quiz như thế nào?",
+    "aliases": ["nút nộp bài ở đâu", "kết thúc bài kiểm tra", "gửi bài làm"],
+    "answer": "Nhấn Nộp bài ở cuối màn hình làm bài. Nếu còn câu chưa trả lời, ứng dụng hỏi xác nhận trước khi nộp."
+  },
+  {
+    "id": "confirm-submit",
+    "category": "Nộp bài",
+    "question": "Điều gì xảy ra nếu còn câu chưa trả lời khi nộp?",
+    "aliases": ["cảnh báo câu bỏ trống", "nộp bài thiếu câu", "xác nhận nộp bài"],
+    "answer": "Ứng dụng hiển thị số câu chưa trả lời và hỏi bạn có chắc chắn muốn nộp không. Bạn có thể hủy xác nhận để quay lại làm tiếp."
+  },
+  {
+    "id": "grading",
+    "category": "Kết quả",
+    "question": "Bài Quiz được chấm điểm như thế nào?",
+    "aliases": ["cách tính điểm", "điểm mỗi câu đúng", "điểm thưởng thời gian"],
+    "answer": "Backend xác định đáp án và tính điểm khi nộp bài. Mỗi câu đúng được 100 điểm và có thể cộng điểm thưởng dựa trên thời gian còn lại; câu sai hoặc bỏ trống không được điểm."
+  },
+  {
+    "id": "results",
+    "category": "Kết quả",
+    "question": "Sau khi nộp bài tôi xem được gì?",
+    "aliases": ["xem điểm quiz", "kết quả hiển thị thế nào", "tỷ lệ chính xác"],
+    "answer": "Trang kết quả hiển thị điểm, tổng số câu, số câu đúng, sai, chưa trả lời, tỷ lệ chính xác, thời gian làm và phần xem lại từng câu."
+  },
+  {
+    "id": "review",
+    "category": "Kết quả",
+    "question": "Xem lại đáp án ở đâu?",
+    "aliases": ["đáp án đúng sau khi nộp", "xem câu trả lời của tôi", "review bài làm"],
+    "answer": "Sau khi nộp, kéo xuống phần Xem lại bài làm. Mỗi câu hiển thị lựa chọn của bạn, đáp án đúng và trạng thái đúng, sai hoặc chưa trả lời."
+  },
+  {
+    "id": "explanation",
+    "category": "Kết quả",
+    "question": "Vì sao câu hỏi không có lời giải thích?",
+    "aliases": ["giải thích đáp án ở đâu", "không thấy lời giải", "câu trả lời sai giải thích"],
+    "answer": "Lời giải chỉ hiển thị nếu dữ liệu câu hỏi có cung cấp. Nếu chưa có, trang kết quả thông báo câu hỏi chưa có lời giải; ứng dụng không tự tạo lời giải cố định."
+  },
+  {
+    "id": "retry",
+    "category": "Kết quả",
+    "question": "Làm lại bài Quiz như thế nào?",
+    "aliases": ["chơi lại bài", "làm bài lần nữa", "nút làm lại"],
+    "answer": "Nhấn Làm lại bài ở trang kết quả để bắt đầu lượt mới của chủ đề đang học."
+  },
+  {
+    "id": "history",
+    "category": "Lịch sử",
+    "question": "Tôi xem lịch sử làm bài ở đâu?",
+    "aliases": ["lịch sử điểm cá nhân", "các bài đã làm", "xem lại lượt chơi cũ"],
+    "answer": "Hệ thống hiện lưu điểm và số câu đã trả lời; quản trị viên có thể xem các lượt chơi của người dùng trong phần quản lý. Người dùng chưa có trang lịch sử cá nhân để mở lại chi tiết từng bài."
+  },
+  {
+    "id": "leaderboard",
+    "category": "Bảng xếp hạng",
+    "question": "Xem bảng xếp hạng ở đâu?",
+    "aliases": ["top điểm", "ai có điểm cao", "leaderboard"],
+    "answer": "Nhấn Bảng xếp hạng ở thanh trên trang chủ. Trang kết quả cũng có thể hiển thị nhóm điểm cao của chủ đề và liên kết tới bảng xếp hạng."
+  },
+  {
+    "id": "categories",
+    "category": "Chủ đề",
+    "question": "Lọc chủ đề theo danh mục thế nào?",
+    "aliases": ["danh mục khoa học", "lọc chủ đề quiz", "xem chủ đề theo loại"],
+    "answer": "Chọn một nút danh mục phía trên danh sách chủ đề; chọn Tất cả để bỏ lọc."
+  },
+  {
+    "id": "login-optional",
+    "category": "Tài khoản",
+    "question": "Có cần đăng nhập để làm bài không?",
+    "aliases": ["chơi quiz không cần tài khoản", "khách có được làm bài", "quiz bắt buộc đăng nhập"],
+    "answer": "Các API xem chủ đề và chơi Quiz hiện được cấu hình công khai. Một số chức năng quản trị yêu cầu tài khoản ADMIN."
+  },
+  {
+    "id": "admin",
+    "category": "Quản trị",
+    "question": "Ai được vào trang quản trị?",
+    "aliases": ["mở admin", "quyền quản trị viên", "quản lý quiz"],
+    "answer": "Trang quản trị chỉ dành cho tài khoản có vai trò ADMIN. Người dùng thường không được phép quản lý chủ đề hoặc câu hỏi."
+  },
+  {
+    "id": "admin-questions",
+    "category": "Quản trị",
+    "question": "Quản trị viên tạo câu hỏi bằng cách nào?",
+    "aliases": ["thêm câu hỏi quiz", "import câu hỏi excel", "tạo câu hỏi bằng ai"],
+    "answer": "Trang Admin hỗ trợ quản lý câu hỏi, nhập dữ liệu từ Excel và tạo câu hỏi gợi ý bằng AI để xem trước rồi lưu. Các chức năng này dành cho quản trị viên."
+  },
+  {
+    "id": "connection-error",
+    "category": "Khắc phục lỗi",
+    "question": "Danh sách chủ đề hoặc câu hỏi không tải được thì sao?",
+    "aliases": ["lỗi tải chủ đề", "backend không chạy", "màn hình tải mãi"],
+    "answer": "Kiểm tra kết nối mạng và trạng thái backend, sau đó thử tải lại. Nếu lỗi vẫn tiếp diễn, ghi lại thời điểm và nội dung lỗi để gửi quản trị viên."
+  },
+  {
+    "id": "submit-error",
+    "category": "Khắc phục lỗi",
+    "question": "Nộp bài bị lỗi thì phải làm gì?",
+    "aliases": ["lỗi khi nộp", "không gửi được bài", "lưu kết quả thất bại"],
+    "answer": "Thông báo lỗi sẽ xuất hiện trên màn hình làm bài. Kiểm tra kết nối backend rồi nhấn Nộp bài để thử lại; không đóng trang khi yêu cầu đang được gửi."
+  },
+  {
+    "id": "chat",
+    "category": "Trợ lý học tập",
+    "question": "Dùng trợ lý học tập như thế nào?",
+    "aliases": ["mở chatbot", "hỏi ai về bài", "đặt câu hỏi học tập"],
+    "answer": "Nhấn nút Hỏi trợ lý AI ở trang chủ hoặc trang kết quả để mở khung chat. Bạn có thể hỏi về kiến thức và cách sử dụng website."
+  },
+  {
+    "id": "chat-review",
+    "category": "Trợ lý học tập",
+    "question": "Hỏi AI giải thích câu làm sai như thế nào?",
+    "aliases": ["giải thích câu sai bằng ai", "hỏi ai về đáp án", "học từ câu trả lời sai"],
+    "answer": "Sau khi nộp bài, vào phần xem lại và nhấn Hỏi AI về câu này. Ngữ cảnh lựa chọn và đáp án đã chấm chỉ được gửi sau khi bài đã nộp."
+  },
+  {
+    "id": "chat-config",
+    "category": "Trợ lý học tập",
+    "question": "Vì sao chatbot dùng kho hỏi đáp thay vì SeekAI?",
+    "aliases": ["seekai chưa cấu hình", "chatbot ai chưa hoạt động", "thiếu api key chatbot"],
+    "answer": "Khi SeekAI chưa được cấu hình hoặc tạm thời không phản hồi, chatbot dùng kho hỏi đáp hỗ trợ về các chức năng đã xác minh của website. Kho này không phải mô hình AI đã được huấn luyện."
+  },
+  {
+    "id": "chat-out-of-scope",
+    "category": "Trợ lý học tập",
+    "question": "Chatbot không biết câu trả lời thì sao?",
+    "aliases": ["hỏi ngoài phạm vi", "không tìm thấy câu phù hợp", "chatbot chưa biết"],
+    "answer": "Chatbot sẽ thông báo chưa tìm được thông tin phù hợp thay vì tự bịa câu trả lời. Bạn có thể hỏi lại bằng cách mô tả rõ chức năng hoặc sự cố."
+  }
+]

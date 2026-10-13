@@ -46,10 +46,13 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Đăng nhập, đăng ký — công khai
                 .requestMatchers("/api/auth/**").permitAll()
-                // Xem danh sách chủ đề / câu hỏi + chơi quiz — công khai, ai cũng chơi được không cần đăng nhập
+                // Danh sách chủ đề và chơi quiz — công khai, ai cũng chơi được không cần đăng nhập
                 .requestMatchers(HttpMethod.GET, "/api/chude/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/cauhoi/**").permitAll()
                 .requestMatchers("/api/choi/**").permitAll()
+                .requestMatchers("/api/chat/**").permitAll()
+                // Chỉ cho phép tải file mẫu công khai; các API câu hỏi còn lại có đáp án quản trị.
+                .requestMatchers(HttpMethod.GET, "/api/cauhoi/template-excel").permitAll()
+                .requestMatchers("/api/cauhoi/**").hasRole("ADMIN")
                 // Thêm/sửa/xoá chủ đề, câu hỏi — chỉ ADMIN
                 .requestMatchers(HttpMethod.POST, "/api/chude/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/chude/**").hasRole("ADMIN")
@@ -59,8 +62,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/cauhoi/**").hasRole("ADMIN")
                 // Toàn bộ API dành riêng cho admin (danh sách người dùng, thống kê tổng quan, quản lý câu hỏi admin)
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/admin/cauhoi/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/admin/cauhoi/template-excel").permitAll()
+                .requestMatchers("/admin/cauhoi/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/admin/cauhoi/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

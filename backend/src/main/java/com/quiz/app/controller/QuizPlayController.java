@@ -1,13 +1,12 @@
 package com.quiz.app.controller;
 
 import com.quiz.app.dto.CauHoiChoiDTO;
+import com.quiz.app.dto.NopBaiRequestDTO;
+import com.quiz.app.dto.NopBaiResponseDTO;
 import com.quiz.app.dto.TraLoiRequestDTO;
 import com.quiz.app.dto.TraLoiResponseDTO;
-import com.quiz.app.entity.KetQua;
 import com.quiz.app.service.QuizPlayService;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +26,11 @@ public class QuizPlayController {
         return ResponseEntity.ok(quizPlayService.layCauHoiDeChoi(chuDeId));
     }
 
+    @PostMapping("/nopbai")
+    public ResponseEntity<NopBaiResponseDTO> nopBai(@RequestBody NopBaiRequestDTO request) {
+        return ResponseEntity.ok(quizPlayService.nopBai(request));
+    }
+
     // Gửi đáp án đã chọn, nhận về đúng/sai
     @PostMapping("/traloi")
     public ResponseEntity<TraLoiResponseDTO> traLoi(@RequestBody TraLoiRequestDTO request) {
@@ -35,26 +39,10 @@ public class QuizPlayController {
         );
     }
 
-    // Lưu kết quả khi kết thúc lượt chơi (sai hoặc hoàn thành hết)
+    // Ngừng nhận điểm do client tính toán; nộp bài mới sẽ được server chấm.
     @PostMapping("/ketqua")
-    public ResponseEntity<KetQua> luuKetQua(@RequestBody LuuKetQuaRequest request) {
-        KetQua ketQua = quizPlayService.luuKetQua(
-                request.getChuDeId(),
-                request.getTenNguoiChoi(),
-                request.getUserId(),
-                request.getDiemSo(),
-                request.getSoCauDaTraLoi()
-        );
-        return ResponseEntity.ok(ketQua);
-    }
-
-    @Getter
-    @Setter
-    public static class LuuKetQuaRequest {
-        private Long chuDeId;
-        private String tenNguoiChoi;
-        private Long userId;
-        private int diemSo;
-        private int soCauDaTraLoi;
+    public ResponseEntity<String> luuKetQuaTuClient() {
+        return ResponseEntity.status(410)
+                .body("Endpoint cũ đã ngừng nhận điểm từ client. Hãy nộp bài qua /api/choi/nopbai.");
     }
 }

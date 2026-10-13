@@ -2,8 +2,8 @@
 // Backend chưa lưu emoji/gradient/màu/category — nên gán theo bảng màu cố định dựa trên vị trí,
 // còn lại (tên, số câu hỏi, lượt chơi, top điểm) đều lấy dữ liệu THẬT từ server.
 
-import type { Topic, Question, Player } from '../data';
-import type { ChuDeThongKeDTO, CauHoiChoiDTO } from '../services/api';
+import type { Topic, Question, Player } from './data';
+import type { ChuDeThongKeDTO, CauHoiChoiDTO } from './services/api';
 
 const PALETTE = [
   { emoji: '🔢', gradient: 'linear-gradient(135deg, #6C5CE7, #a29bfe)', shadow: 'rgba(108,92,231,0.4)' },
@@ -26,10 +26,11 @@ export function mapChuDeToTopic(dto: ChuDeThongKeDTO, index: number): Topic {
     gradient: style.gradient,
     shadow: style.shadow,
     category: dto.danhMuc || 'Khoa học',
+    choPhepXemDapAn: dto.choPhepXemDapAn ?? false,
   };
 }
 
-// Question mở rộng: giữ thêm id đáp án thật của backend để gửi lên /api/choi/traloi
+// Question mở rộng để gửi lựa chọn lên server khi nộp bài.
 export interface QuestionWithIds extends Question {
   backendId: number;
   answerIds: number[];

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Topic } from '../data';
 import type { AuthUser } from '../services/api';
+import StudyChatWidget from '../components/StudyChatWidget';
 
 interface Props {
   topics: Topic[];
@@ -14,7 +15,7 @@ interface Props {
   streak: number;
 }
 
-const CATEGORIES = ['Tất cả', 'Khoa học', 'Xã hội', 'Nghệ thuật'];
+// Danh mục được sinh động từ dữ liệu chủ đề (API)
 
 function ProgressRing({ pct }: { pct: number }) {
   const r = 18, c = 2 * Math.PI * r;
@@ -48,7 +49,7 @@ function TopicCard({ topic, onStart }: { topic: Topic; onStart: () => void }) {
       onTouchEnd={() => setHovered(false)}
       onClick={onStart}
     >
-      <div className="absolute inset-0 opacity-10"
+      <div className="absolute inset-0 opacity-10 pointer-events-none"
         style={{ background: 'radial-gradient(circle at 70% 30%, white, transparent 60%)' }} />
       <div className="p-5 flex flex-col h-full min-h-[200px]">
         <div className="flex items-start justify-between mb-3">
@@ -86,9 +87,11 @@ function TopicCard({ topic, onStart }: { topic: Topic; onStart: () => void }) {
 
 export default function HomeScreen({ topics, currentUser, onStart, onLeaderboard, onAdmin, onLogin, onLogout, xp, streak }: Props) {
   const [activeCategory, setActiveCategory] = useState('Tất cả');
+  const dynamicCategories = ['Tất cả', ...Array.from(new Set(topics.map((t) => t.category).filter(Boolean)))];
   const filtered = activeCategory === 'Tất cả' ? topics : topics.filter(t => t.category === activeCategory);
 
   return (
+    <>
     <div className="min-h-screen" style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #1a1048 50%, #24243e 100%)' }}>
       <div className="fixed top-0 left-0 w-96 h-96 rounded-full opacity-20 pointer-events-none"
         style={{ background: 'radial-gradient(circle, #6C5CE7, transparent)', filter: 'blur(60px)', transform: 'translate(-30%, -30%)' }} />
@@ -150,7 +153,7 @@ export default function HomeScreen({ topics, currentUser, onStart, onLeaderboard
         </div>
 
         <div className="flex gap-2.5 overflow-x-auto pb-2 mb-6" style={{ scrollbarWidth: 'none' }}>
-          {CATEGORIES.map(cat => (
+          {dynamicCategories.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)}
               className="btn-bounce flex-shrink-0 px-4 py-2 rounded-full font-extrabold text-sm transition-all duration-200"
               style={{
@@ -177,5 +180,7 @@ export default function HomeScreen({ topics, currentUser, onStart, onLeaderboard
         )}
       </div>
     </div>
+    <StudyChatWidget />
+    </>
   );
 }

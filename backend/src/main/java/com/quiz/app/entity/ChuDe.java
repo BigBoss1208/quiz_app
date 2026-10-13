@@ -36,6 +36,9 @@ public class ChuDe {
     @Column(name = "danh_muc", length = 50)
     private String danhMuc; // "Khoa học" | "Xã hội" | "Nghệ thuật" ...
 
+    @Column(name = "cho_phep_xem_dap_an")
+    private Boolean choPhepXemDapAn = false;
+
     @OneToMany(mappedBy = "chuDe", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<CauHoi> danhSachCauHoi;

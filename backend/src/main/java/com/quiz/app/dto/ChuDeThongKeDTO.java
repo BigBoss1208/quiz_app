@@ -16,6 +16,7 @@ public class ChuDeThongKeDTO {
     private String moTa;
     private String doKho;
     private String danhMuc;
+    private Boolean choPhepXemDapAn;
     private long soCauHoi;
     private long luotChoi;
     private List<TopDiemDTO> topDiemCao;

@@ -41,7 +41,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(text || `API lỗi ${res.status}: ${path}`);
+    let message = text;
+    if (text) {
+      try {
+        const body = JSON.parse(text) as { error?: string; message?: string };
+        message = body.error || body.message || text;
+      } catch {
+        message = text;
+      }
+    }
+    throw new Error(message || `API lỗi ${res.status}: ${path}`);
   }
 
   if (res.status === 204) {
@@ -78,6 +87,7 @@ export interface ChuDeThongKeDTO {
   moTa: string | null;
   doKho: string | null; // "DE" | "TRUNG_BINH" | "KHO"
   danhMuc: string | null; // "Khoa học" | "Xã hội" | "Nghệ thuật" ...
+  choPhepXemDapAn?: boolean;
   soCauHoi: number;
   luotChoi: number;
   topDiemCao: {
@@ -93,6 +103,7 @@ export interface ChuDeDTO {
   moTa: string | null;
   doKho: string | null;
   danhMuc: string | null;
+  choPhepXemDapAn?: boolean;
 }
 
 export interface DapAnChoiDTO {
@@ -111,6 +122,34 @@ export interface TraLoiResponseDTO {
   dung: boolean;
   dapAnDungId: number;
   daHetCauHoi: boolean;
+}
+
+export interface CauTraLoiNopBaiDTO {
+  cauHoiId: number;
+  dapAnId: number | null;
+  thoiGianTraLoi: number;
+}
+
+export interface CauHoiReviewDTO {
+  cauHoiId: number;
+  noiDungCauHoi: string;
+  hinhAnh: string | null;
+  danhSachDapAn: DapAnChoiDTO[];
+  dapAnDaChonId: number | null;
+  dapAnDungId: number;
+  ketQua: 'DUNG' | 'SAI' | 'CHUA_TRA_LOI';
+  giaiThich: string | null;
+}
+
+export interface NopBaiResponseDTO {
+  ketQuaId: number;
+  diemSo: number;
+  tongSoCauHoi: number;
+  soCauDung: number;
+  soCauSai: number;
+  soCauChuaTraLoi: number;
+  thoiGianLam: number;
+  danhSachCauHoi: CauHoiReviewDTO[];
 }
 
 // ===== Kiểu dữ liệu Admin CRUD câu hỏi =====
@@ -299,14 +338,14 @@ export const guiDapAn = (
     }),
   });
 
-export const luuKetQua = (data: {
+export const nopBai = (data: {
   chuDeId: number;
   tenNguoiChoi: string;
   userId?: number | null;
-  diemSo: number;
-  soCauDaTraLoi: number;
+  thoiGianLam: number;
+  danhSachTraLoi: CauTraLoiNopBaiDTO[];
 }) =>
-  request('/choi/ketqua', {
+  request<NopBaiResponseDTO>('/choi/nopbai', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -356,3 +395,34 @@ export const layThongKeTongQuan = () =>
   request<ThongKeTongQuanDTO>(
     '/admin/thongke'
   );
+
+// ===== Chatbot AI =====
+
+export interface ChatResponseDTO {
+  reply: string;
+  source: 'SEEKAI' | 'KNOWLEDGE_BASE';
+  notice?: string | null;
+}
+
+export interface ChatQuestionContext {
+  question: string;
+  options: string[];
+  selectedAnswer: string;
+  correctAnswer: string;
+  outcome: string;
+  explanation: string | null;
+}
+
+export const layTrangThaiChat = () =>
+  request<{ seekAiConfigured: boolean }>('/chat/status');
+
+export const guiTinNhanChat = async (
+  message: string,
+  questionContext?: ChatQuestionContext,
+): Promise<ChatResponseDTO> => {
+  const data = await request<ChatResponseDTO>('/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, questionContext }),
+  });
+  return data;
+};
