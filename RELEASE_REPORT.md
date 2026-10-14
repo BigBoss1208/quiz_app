@@ -69,7 +69,9 @@ Loại khỏi commit: HTTP request cá nhân trong reset client; root package-lo
 
 ## GitHub
 
-Commit SHA và trạng thái push được xác nhận bằng Git remote và ghi trong phần bàn giao. Không tuyên bố push/deploy thành công khi chưa xác nhận.
+Đã push commit source **`5847c296d6d002aca3845416097f1ebf56b98786`** lên `origin/main`; `git ls-remote origin refs/heads/main` trả đúng SHA này. Push fast-forward từ `36d2af2`, không force push. [Xem commit source trên GitHub](https://github.com/BigBoss1208/quiz_app/commit/5847c296d6d002aca3845416097f1ebf56b98786).
+
+Bản cập nhật báo cáo này là commit tài liệu sau commit source, không đổi code đã build/test. HEAD tài liệu cuối được xác nhận trong câu trả lời bàn giao và `git log -1`.
 
 ## Việc cần thực hiện trước Production
 
