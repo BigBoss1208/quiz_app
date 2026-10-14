@@ -35,23 +35,35 @@ public class CauHoiService {
     }
 
     // duLieu.chuDe chỉ cần chứa id, danhSachDapAn chứa các DapAn (chưa gắn cauHoi ngược)
+    @Transactional
     public CauHoi them(CauHoi duLieu) {
+        QuestionValidator.validate(duLieu);
+        duLieu.setId(null);
         ChuDe chuDe = chuDeRepository.findById(duLieu.getChuDe().getId())
                 .orElseThrow(() -> new RuntimeException("Chủ đề không tồn tại"));
         duLieu.setChuDe(chuDe);
+        if (duLieu.getThuTu() == null) {
+            duLieu.setThuTu(cauHoiRepository.findByChuDeIdOrderByThuTuAsc(chuDe.getId()).stream()
+                    .mapToInt(q -> q.getThuTu() == null ? 0 : q.getThuTu()).max().orElse(0) + 1);
+        }
 
         if (duLieu.getDanhSachDapAn() != null) {
             for (DapAn dapAn : duLieu.getDanhSachDapAn()) {
+                dapAn.setId(null);
                 dapAn.setCauHoi(duLieu);
             }
         }
         return cauHoiRepository.save(duLieu);
     }
 
+    @Transactional
     public CauHoi capNhat(Long id, CauHoi duLieu) {
+        QuestionValidator.validate(duLieu);
         CauHoi cauHoi = layTheoId(id);
         cauHoi.setNoiDungCauHoi(duLieu.getNoiDungCauHoi());
         cauHoi.setHinhAnh(duLieu.getHinhAnh());
+        cauHoi.setLoaiCauHoi(duLieu.getLoaiCauHoi());
+        cauHoi.setGiaiThich(duLieu.getGiaiThich());
         cauHoi.setThuTu(duLieu.getThuTu());
 
         if (duLieu.getChuDe() != null && duLieu.getChuDe().getId() != null) {
@@ -64,6 +76,7 @@ public class CauHoiService {
         cauHoi.getDanhSachDapAn().clear();
         if (duLieu.getDanhSachDapAn() != null) {
             for (DapAn dapAn : duLieu.getDanhSachDapAn()) {
+                dapAn.setId(null);
                 dapAn.setCauHoi(cauHoi);
                 cauHoi.getDanhSachDapAn().add(dapAn);
             }
@@ -130,6 +143,7 @@ public class CauHoiService {
             danhSachDapAn.add(daD);
 
             cauHoi.setDanhSachDapAn(danhSachDapAn);
+            QuestionValidator.validate(cauHoi);
             danhSachCauHoi.add(cauHoi);
         }
 

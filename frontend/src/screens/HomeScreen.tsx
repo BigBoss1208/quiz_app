@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Topic } from '../data';
+import { layNhomMon, type NhomMon } from '../services/api';
 import type { AuthUser } from '../services/api';
 import StudyChatWidget from '../components/StudyChatWidget';
 
@@ -87,11 +88,15 @@ function TopicCard({ topic, onStart }: { topic: Topic; onStart: () => void }) {
 
 export default function HomeScreen({ topics, currentUser, onStart, onLeaderboard, onAdmin, onLogin, onLogout, xp, streak }: Props) {
   const [activeCategory, setActiveCategory] = useState('Tất cả');
-  const dynamicCategories = ['Tất cả', ...Array.from(new Set(topics.map((t) => t.category).filter(Boolean)))];
+  const [groups, setGroups] = useState<NhomMon[]>([]);
+  const [groupError, setGroupError] = useState('');
+  useEffect(() => { layNhomMon().then(setGroups).catch(e => setGroupError(e.message)); }, [topics]);
+  const dynamicCategories = ['Tất cả', ...groups.map(g => g.ten)];
   const filtered = activeCategory === 'Tất cả' ? topics : topics.filter(t => t.category === activeCategory);
 
   return (
     <>
+    {groupError && <p role="alert">Không tải được nhóm môn: {groupError}</p>}
     <div className="min-h-screen" style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #1a1048 50%, #24243e 100%)' }}>
       <div className="fixed top-0 left-0 w-96 h-96 rounded-full opacity-20 pointer-events-none"
         style={{ background: 'radial-gradient(circle, #6C5CE7, transparent)', filter: 'blur(60px)', transform: 'translate(-30%, -30%)' }} />
@@ -112,7 +117,7 @@ export default function HomeScreen({ topics, currentUser, onStart, onLeaderboard
               style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
               🏆 <span className="hidden sm:inline">Bảng xếp hạng</span>
             </button>
-            <button onClick={onAdmin}
+            <button onClick={onAdmin} aria-label="Quản trị"
               className="btn-bounce flex items-center gap-1.5 px-3 py-2 rounded-2xl text-white/60 font-bold text-sm"
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
               ⚙️

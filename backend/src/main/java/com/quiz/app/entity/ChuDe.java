@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
 @Entity
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Table(name = "chu_de")
 @Getter
 @Setter
@@ -37,7 +38,18 @@ public class ChuDe {
     private String danhMuc; // "Khoa học" | "Xã hội" | "Nghệ thuật" ...
 
     @Column(name = "cho_phep_xem_dap_an")
-    private Boolean choPhepXemDapAn = false;
+    private Boolean choPhepXemDapAn;
+
+    @ManyToOne
+    @JoinColumn(name = "nhom_mon_id")
+    private NhomMon nhomMon;
+
+    @Column(name = "hien_dap_an_sau_nop")
+    private Boolean hienDapAnSauNop;
+    @Column(name = "xao_tron_cau_hoi")
+    private Boolean xaoTronCauHoi;
+    @Column(name = "xao_tron_lua_chon")
+    private Boolean xaoTronLuaChon;
 
     @OneToMany(mappedBy = "chuDe", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore

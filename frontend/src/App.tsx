@@ -56,13 +56,23 @@ export default function App() {
   const [streak, setStreak] = useState(0);
 
   // Tải danh sách chủ đề từ Backend
+  const activeTopicKey = `quiz_active_topic_${currentUser?.id ?? 'guest'}`;
   const loadTopics = () => {
-    setLoadingTopics(true);
+    // Keep the active Admin editor mounted during background refresh.
+    if (topics.length === 0) setLoadingTopics(true);
     setLoadError(null);
 
     layDanhSachChuDeThongKe()
       .then((data) => {
-        setTopics(data.map(mapChuDeToTopic));
+        const loaded = data.map(mapChuDeToTopic);
+        setTopics(loaded);
+        if (!selectedTopic && screen === 'home') {
+          try {
+            const id = sessionStorage.getItem(activeTopicKey);
+            const active = loaded.find(t => t.id === id);
+            if (active) { setSelectedTopic(active); setScreen('quiz'); }
+          } catch { /* Storage can be unavailable in private browsing. */ }
+        }
       })
       .catch(() => {
         setLoadError(
@@ -80,6 +90,7 @@ export default function App() {
 
   // Bắt đầu bài Quiz mới
   const handleStartTopic = (topic: Topic) => {
+    try { sessionStorage.setItem(activeTopicKey, topic.id); } catch {}
     setCelebrate(false);
     setLastResult(null);
     setSelectedTopic(topic);
@@ -88,6 +99,7 @@ export default function App() {
 
   // Chỉ chạy khi Backend nộp bài thành công
   const handleFinishQuiz = (result: NopBaiResponseDTO) => {
+    try { sessionStorage.removeItem(activeTopicKey); } catch {}
     setLastResult(result);
 
     setXp((previous) => previous + result.diemSo);
@@ -100,6 +112,7 @@ export default function App() {
 
   // Quay lại trang chủ
   const handleBackToHome = () => {
+    try { sessionStorage.removeItem(activeTopicKey); } catch {}
     setCelebrate(false);
     setScreen('home');
     loadTopics();
@@ -137,6 +150,7 @@ export default function App() {
 
   // Đăng xuất
   const handleLogout = () => {
+    try { sessionStorage.removeItem(activeTopicKey); } catch {}
     xoaAuth();
     setCurrentUser(null);
     setCelebrate(false);
@@ -222,9 +236,7 @@ export default function App() {
           result={lastResult}
           celebrate={celebrate}
           onReplay={() => {
-            setCelebrate(false);
-            setLastResult(null);
-            setScreen('quiz');
+            handleStartTopic(selectedTopic);
           }}
           onHome={handleBackToHome}
           onLeaderboard={() => {

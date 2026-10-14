@@ -12,9 +12,19 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    // Khoá bí mật để ký token — trong thực tế nên đưa vào application.properties / biến môi trường
-    private final SecretKey secretKey = Keys.hmacShaKeyFor(
-            "quiz-app-secret-key-phai-du-dai-toi-thieu-32-ky-tu-vietnam".getBytes());
+    private final SecretKey secretKey;
+
+    public JwtUtil(@org.springframework.beans.factory.annotation.Value("${jwt.secret:}") String configured,
+                   @org.springframework.beans.factory.annotation.Value("${app.production:false}") boolean production) {
+        if (configured.isBlank()) {
+            if (production) throw new IllegalStateException("JWT_SECRET must be configured in production");
+            secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+        } else {
+            byte[] bytes = configured.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            if (bytes.length < 32) throw new IllegalStateException("JWT_SECRET must contain at least 32 UTF-8 bytes");
+            secretKey = Keys.hmacShaKeyFor(bytes);
+        }
+    }
 
     private static final long HAN_TOKEN_MS = 24 * 60 * 60 * 1000; // 24 giờ
 

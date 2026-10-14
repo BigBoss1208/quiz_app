@@ -97,6 +97,7 @@ public class CauHoiController {
             );
         }
 
+        com.quiz.app.service.QuestionImportService.checkFile(file, java.util.Set.of(".xlsx", ".xls"));
         List<String> danhSachLoi = new ArrayList<>();
         try {
             // Đọc dữ liệu từ file Excel

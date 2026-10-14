@@ -20,6 +20,7 @@ public class ChuDeService {
     private final ChuDeRepository chuDeRepository;
     private final CauHoiRepository cauHoiRepository;
     private final KetQuaRepository ketQuaRepository;
+    private final NhomMonService nhomMonService;
 
     public List<ChuDe> layTatCa() {
         return chuDeRepository.findAll();
@@ -31,19 +32,26 @@ public class ChuDeService {
     }
 
     public ChuDe them(ChuDe chuDe) {
+        nhomMonService.link(chuDe);
         return chuDeRepository.save(chuDe);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public ChuDe capNhat(Long id, ChuDe duLieu) {
         ChuDe chuDe = layTheoId(id);
         chuDe.setTenChuDe(duLieu.getTenChuDe());
-        chuDe.setHinhAnh(duLieu.getHinhAnh());
+        if (duLieu.getHinhAnh() != null) chuDe.setHinhAnh(duLieu.getHinhAnh());
         chuDe.setMoTa(duLieu.getMoTa());
-        chuDe.setDoKho(duLieu.getDoKho());
+        if (duLieu.getDoKho() != null) chuDe.setDoKho(duLieu.getDoKho());
         chuDe.setDanhMuc(duLieu.getDanhMuc());
+        chuDe.setNhomMon(duLieu.getNhomMon());
+        if (duLieu.getHienDapAnSauNop() != null) chuDe.setHienDapAnSauNop(duLieu.getHienDapAnSauNop());
+        if (duLieu.getXaoTronCauHoi() != null) chuDe.setXaoTronCauHoi(duLieu.getXaoTronCauHoi());
+        if (duLieu.getXaoTronLuaChon() != null) chuDe.setXaoTronLuaChon(duLieu.getXaoTronLuaChon());
         if (duLieu.getChoPhepXemDapAn() != null) {
             chuDe.setChoPhepXemDapAn(duLieu.getChoPhepXemDapAn());
         }
+        nhomMonService.link(chuDe);
         return chuDeRepository.save(chuDe);
     }
 

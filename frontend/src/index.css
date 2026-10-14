@@ -1084,3 +1084,257 @@ body {
     animation: none !important;
   }
 }
+
+/* ===== GIAI ĐOẠN C: DẠNG CÂU HỎI ĐIỀN TỪ & SẮP XẾP ===== */
+
+.quiz-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quiz-type-badge.trac-nghiem {
+  color: #c4b5fd;
+  background: rgba(167, 139, 250, 0.15);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.quiz-type-badge.dien-tu {
+  color: #5eead4;
+  background: rgba(94, 234, 212, 0.15);
+  border: 1px solid rgba(94, 234, 212, 0.3);
+}
+
+.quiz-type-badge.sap-xep {
+  color: #fde047;
+  background: rgba(253, 224, 71, 0.15);
+  border: 1px solid rgba(253, 224, 71, 0.3);
+}
+
+/* ĐIỀN TỪ (DIEN_TU) */
+.quiz-fill-wrapper {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quiz-fill-input-box {
+  position: relative;
+  width: 100%;
+}
+
+.quiz-fill-input {
+  width: 100%;
+  min-height: 64px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  border: 2px solid rgba(167, 139, 250, 0.3);
+  background: rgba(20, 16, 52, 0.85);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+  outline: none;
+  transition: all 200ms ease;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.quiz-fill-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 500;
+}
+
+.quiz-fill-input:focus {
+  border-color: #a78bfa;
+  background: rgba(26, 20, 68, 0.95);
+  box-shadow: 0 0 24px rgba(167, 139, 250, 0.4), inset 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.quiz-fill-clear {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms ease;
+}
+
+.quiz-fill-clear:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.quiz-fill-hint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* SẮP XẾP CÂU (SAP_XEP) */
+.quiz-reorder-container {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quiz-reorder-target {
+  min-height: 80px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 2px dashed rgba(167, 139, 250, 0.45);
+  background: rgba(18, 14, 46, 0.7);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  transition: all 200ms ease;
+}
+
+.quiz-reorder-target.has-tokens {
+  border-style: solid;
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(22, 17, 58, 0.85);
+}
+
+.quiz-reorder-placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 14px;
+  font-weight: 600;
+  font-style: italic;
+  width: 100%;
+  text-align: center;
+  user-select: none;
+}
+
+.quiz-reorder-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.quiz-reorder-pool-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quiz-reorder-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.quiz-reorder-btn {
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.quiz-reorder-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(167, 139, 250, 0.4);
+}
+
+.quiz-reorder-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.quiz-reorder-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.quiz-token-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(108, 92, 231, 0.35), rgba(72, 52, 212, 0.5));
+  border: 1.5px solid rgba(167, 139, 250, 0.35);
+  cursor: pointer;
+  user-select: none;
+  transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.quiz-token-chip:hover {
+  transform: translateY(-2px);
+  border-color: #a78bfa;
+  box-shadow: 0 6px 18px rgba(108, 92, 231, 0.45);
+}
+
+.quiz-token-chip:active {
+  transform: scale(0.96);
+}
+
+.quiz-token-chip.is-in-assembled {
+  background: linear-gradient(135deg, #6c5ce7, #5543ce);
+  border-color: #c4b5fd;
+  box-shadow: 0 4px 14px rgba(108, 92, 231, 0.5);
+  animation: token-pop 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.quiz-token-chip.is-placed {
+  opacity: 0.25;
+  pointer-events: none;
+  border-style: dashed;
+}
+
+@keyframes token-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.phase-d section { padding: 20px; border: 1px solid #665299; border-radius: 16px; background: #211943; }
+.phase-d h2 { font-weight: 800; font-size: 20px; margin-bottom: 12px; }
+.phase-d input:not([type=checkbox]):not([type=radio]), .phase-d textarea, .phase-d select { background: #352956; color: white; border: 1px solid #9079b8; border-radius: 8px; padding: 8px; margin: 4px; max-width: 100%; }
+.phase-d textarea { display: block; width: 100%; min-height: 75px; }
+.phase-d button { background: #6952bb; border-radius: 8px; padding: 8px 12px; margin: 4px; }
+.phase-d button:disabled { opacity: .4; }
+.phase-d .flex > input:not([type=radio]):not([type=checkbox]) { min-width: 0; flex: 1; }
+.phase-d input[type=radio], .phase-d input[type=checkbox] { flex: none; width: 16px; height: 16px; align-self: center; }
+.phase-d { overflow-wrap: anywhere; }
+.phase-d details { padding: 12px; background: #17102d; border-radius: 8px; }

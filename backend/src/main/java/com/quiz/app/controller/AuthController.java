@@ -14,20 +14,20 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> dangNhap(@RequestBody AuthDTO.LoginRequest req) {
+    public ResponseEntity<?> dangNhap(@jakarta.validation.Valid @RequestBody AuthDTO.LoginRequest req) {
         try {
             return ResponseEntity.ok(authService.dangNhap(req.getUsername(), req.getMatKhau()));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body(e.getMessage());
+            return ResponseEntity.status(401).body(java.util.Map.of("message","Sai tên đăng nhập hoặc mật khẩu"));
         }
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> dangKy(@RequestBody AuthDTO.RegisterRequest req) {
+    public ResponseEntity<?> dangKy(@jakarta.validation.Valid @RequestBody AuthDTO.RegisterRequest req) {
         try {
             return ResponseEntity.ok(authService.dangKy(req.getUsername(), req.getMatKhau(), req.getHoTen()));
         } catch (RuntimeException e) {
-            return ResponseEntity.status(400).body(e.getMessage());
+            return ResponseEntity.status(400).body(java.util.Map.of("message","Không thể đăng ký; kiểm tra dữ liệu hoặc tên đăng nhập đã tồn tại"));
         }
     }
 }

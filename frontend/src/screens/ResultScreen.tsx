@@ -232,7 +232,8 @@ export default function ResultScreen({ topicId, result, onReplay, onHome, onLead
 
         </section>
 
-        <section className="mb-8" aria-labelledby="review-title">
+        {result.danhSachCauHoi.length === 0 && <p className="text-white/60 mb-8">Đề thi chỉ cho xem điểm; đáp án và giải thích được ẩn theo cấu hình.</p>}
+        <section className="mb-8" aria-labelledby="review-title" hidden={result.danhSachCauHoi.length === 0}>
 
           <div className="flex items-center justify-between gap-3 mb-4">
 
@@ -249,117 +250,163 @@ export default function ResultScreen({ topicId, result, onReplay, onHome, onLead
           <div className="space-y-4">
 
             {result.danhSachCauHoi.map((question, index) => {
-
               const correctAnswer = question.danhSachDapAn.find((answer) => answer.id === question.dapAnDungId);
-
               const selectedAnswer = question.danhSachDapAn.find((answer) => answer.id === question.dapAnDaChonId);
 
               const status = question.ketQua === 'DUNG'
-
                 ? { label: 'Trả lời đúng', icon: '✓', color: '#00D9A5' }
-
                 : question.ketQua === 'SAI'
-
                   ? { label: 'Trả lời sai', icon: '✗', color: '#FF8585' }
-
                   : { label: 'Chưa trả lời', icon: '—', color: '#FFC107' };
 
+              let selectedText = 'Người học chưa chọn đáp án.';
+              let correctText = 'Không có dữ liệu đáp án đúng.';
+
+              if (question.loaiCauHoi === 'DIEN_TU') {
+                selectedText = question.cauTraLoiText ? question.cauTraLoiText : 'Người học chưa điền đáp án.';
+                correctText = question.dapAnDungText ? question.dapAnDungText : 'Không có dữ liệu đáp án đúng.';
+              } else if (question.loaiCauHoi === 'SAP_XEP') {
+                const userTokens = (question.thuTuTokenIdsDaChon || [])
+                  .map((id) => question.danhSachDapAn.find((d) => d.id === id)?.noiDung)
+                  .filter(Boolean)
+                  .join(' ');
+                const correctTokens = (question.thuTuTokenIdsDung || [])
+                  .map((id) => question.danhSachDapAn.find((d) => d.id === id)?.noiDung)
+                  .filter(Boolean)
+                  .join(' ');
+                selectedText = userTokens || 'Người học chưa sắp xếp câu.';
+                correctText = correctTokens || 'Không có dữ liệu đáp án đúng.';
+              } else {
+                selectedText = selectedAnswer?.noiDung ?? 'Người học chưa chọn đáp án.';
+                correctText = correctAnswer?.noiDung ?? 'Không có dữ liệu đáp án đúng.';
+              }
+
               const context: ChatQuestionContext = {
-
                 question: question.noiDungCauHoi,
-
                 options: question.danhSachDapAn.map((answer) => answer.noiDung),
-
-                selectedAnswer: selectedAnswer?.noiDung ?? 'Người học chưa chọn đáp án.',
-
-                correctAnswer: correctAnswer?.noiDung ?? 'Không có dữ liệu đáp án đúng.',
-
+                selectedAnswer: selectedText,
+                correctAnswer: correctText,
                 outcome: status.label,
-
                 explanation: question.giaiThich,
-
               };
 
               return (
-
                 <article key={question.cauHoiId} className="rounded-2xl p-4 sm:p-5"
-
                   style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}>
-
                   <div className="flex items-start justify-between gap-3 mb-3">
-
-                    <h3 className="text-white font-extrabold leading-snug">Câu {index + 1}: {question.noiDungCauHoi}</h3>
-
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-white/60 text-xs font-bold uppercase">Câu {index + 1}</span>
+                        {question.loaiCauHoi === 'DIEN_TU' ? (
+                          <span className="quiz-type-badge dien-tu">✏️ Điền từ</span>
+                        ) : question.loaiCauHoi === 'SAP_XEP' ? (
+                          <span className="quiz-type-badge sap-xep">🧩 Sắp xếp</span>
+                        ) : (
+                          <span className="quiz-type-badge trac-nghiem">🔘 Trắc nghiệm</span>
+                        )}
+                      </div>
+                      <h3 className="text-white font-extrabold leading-snug">{question.noiDungCauHoi}</h3>
+                    </div>
                     <span className="shrink-0 font-extrabold text-sm" style={{ color: status.color }}>
-
                       {status.icon} {status.label}
-
                     </span>
-
                   </div>
 
                   {question.hinhAnh && <img src={question.hinhAnh} alt="" className="max-h-48 max-w-full object-contain rounded-xl mb-3" />}
 
-                  <ul className="space-y-2">
+                  {/* Review cho dạng ĐIỀN TỪ */}
+                  {question.loaiCauHoi === 'DIEN_TU' && (
+                    <div className="space-y-2 mb-3">
+                      <div className="p-3 rounded-xl text-sm"
+                        style={{
+                          background: question.ketQua === 'DUNG' ? 'rgba(0,217,165,0.14)' : 'rgba(255,107,107,0.15)',
+                          border: `1px solid ${question.ketQua === 'DUNG' ? 'rgba(0,217,165,0.45)' : 'rgba(255,107,107,0.45)'}`,
+                        }}>
+                        <div className="text-white/60 text-xs font-bold mb-1">Câu trả lời của bạn:</div>
+                        <div className="text-white font-extrabold text-base">
+                          {question.cauTraLoiText?.trim() || <span className="text-white/40 italic">(Chưa điền đáp án)</span>}
+                        </div>
+                      </div>
 
-                    {question.danhSachDapAn.map((answer, answerIndex) => {
-
-                      const isCorrect = answer.id === question.dapAnDungId;
-
-                      const isSelected = answer.id === question.dapAnDaChonId;
-
-                      return (
-
-                        <li key={answer.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl px-3 py-2 text-sm"
-
+                      {question.ketQua !== 'DUNG' && (
+                        <div className="p-3 rounded-xl text-sm"
                           style={{
-
-                            background: isCorrect ? 'rgba(0,217,165,0.14)' : isSelected ? 'rgba(255,107,107,0.15)' : 'rgba(255,255,255,0.04)',
-
-                            border: `1px solid ${isCorrect ? 'rgba(0,217,165,0.45)' : isSelected ? 'rgba(255,107,107,0.45)' : 'transparent'}`,
-
+                            background: 'rgba(0,217,165,0.14)',
+                            border: '1px solid rgba(0,217,165,0.45)',
                           }}>
+                          <div className="text-emerald-300 text-xs font-bold mb-1">Đáp án đúng:</div>
+                          <div className="text-emerald-100 font-extrabold text-base">
+                            {question.dapAnDungText || 'Không có dữ liệu'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                          <span className="text-white/60 font-extrabold">{String.fromCharCode(65 + answerIndex)}.</span>
+                  {/* Review cho dạng SẮP XẾP */}
+                  {question.loaiCauHoi === 'SAP_XEP' && (
+                    <div className="space-y-2 mb-3">
+                      <div className="p-3 rounded-xl text-sm"
+                        style={{
+                          background: question.ketQua === 'DUNG' ? 'rgba(0,217,165,0.14)' : 'rgba(255,107,107,0.15)',
+                          border: `1px solid ${question.ketQua === 'DUNG' ? 'rgba(0,217,165,0.45)' : 'rgba(255,107,107,0.45)'}`,
+                        }}>
+                        <div className="text-white/60 text-xs font-bold mb-1">Thứ tự bạn đã ghép:</div>
+                        <div className="text-white font-extrabold text-base">
+                          {selectedText || <span className="text-white/40 italic">(Chưa sắp xếp câu)</span>}
+                        </div>
+                      </div>
 
-                          <span className="text-white/90">{answer.noiDung}</span>
+                      {question.ketQua !== 'DUNG' && (
+                        <div className="p-3 rounded-xl text-sm"
+                          style={{
+                            background: 'rgba(0,217,165,0.14)',
+                            border: '1px solid rgba(0,217,165,0.45)',
+                          }}>
+                          <div className="text-emerald-300 text-xs font-bold mb-1">Thứ tự đúng:</div>
+                          <div className="text-emerald-100 font-extrabold text-base">
+                            {correctText}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                          {isCorrect && <span className="text-emerald-200 font-extrabold">✓ Đáp án đúng</span>}
-
-                          {isSelected && <span className="text-rose-200 font-extrabold">← Bạn đã chọn</span>}
-
-                        </li>
-
-                      );
-
-                    })}
-
-                  </ul>
+                  {/* Review cho dạng TRẮC NGHIỆM */}
+                  {(question.loaiCauHoi === 'TRAC_NGHIEM' || !question.loaiCauHoi) && (
+                    <ul className="space-y-2">
+                      {question.danhSachDapAn.map((answer, answerIndex) => {
+                        const isCorrect = answer.id === question.dapAnDungId;
+                        const isSelected = answer.id === question.dapAnDaChonId;
+                        return (
+                          <li key={answer.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl px-3 py-2 text-sm"
+                            style={{
+                              background: isCorrect ? 'rgba(0,217,165,0.14)' : isSelected ? 'rgba(255,107,107,0.15)' : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${isCorrect ? 'rgba(0,217,165,0.45)' : isSelected ? 'rgba(255,107,107,0.45)' : 'transparent'}`,
+                            }}>
+                            <span className="text-white/60 font-extrabold">{String.fromCharCode(65 + answerIndex)}.</span>
+                            <span className="text-white/90">{answer.noiDung}</span>
+                            {isCorrect && <span className="text-emerald-200 font-extrabold">✓ Đáp án đúng</span>}
+                            {isSelected && <span className="text-rose-200 font-extrabold">← Bạn đã chọn</span>}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
 
                   <p className="text-white/70 text-sm mt-3">
-
                     {question.giaiThich?.trim()
-
                       ? <>Giải thích: {question.giaiThich}</>
-
                       : 'Câu hỏi này chưa có lời giải thích được cung cấp.'}
-
                   </p>
 
                   <button type="button" onClick={() => setChatContext(context)}
-
                     className="mt-3 rounded-xl px-3 py-2 text-sm font-extrabold text-white"
-
                     style={{ background: 'rgba(108,92,231,0.38)', border: '1px solid rgba(162,155,254,0.45)' }}>
-
                     ✨ Hỏi AI về câu này
-
                   </button>
-
                 </article>
-
               );
-
             })}
 
           </div>

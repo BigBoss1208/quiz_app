@@ -25,6 +25,10 @@ public class DapAn {
     @Column(name = "la_dap_an_dung", nullable = false)
     private Boolean laDapAnDung = false;
 
+    // Thứ tự đúng dành cho token trong câu hỏi sắp xếp (0, 1, 2...)
+    @Column(name = "thu_tu")
+    private Integer thuTu;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cau_hoi_id", nullable = false)
     @JsonIgnore

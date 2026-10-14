@@ -17,6 +17,12 @@ import java.util.List;
 @AllArgsConstructor
 public class CauHoi {
 
+    public enum LoaiCauHoi {
+        TRAC_NGHIEM,
+        DIEN_TU,
+        SAP_XEP
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -30,10 +36,22 @@ public class CauHoi {
     @Column(name = "thu_tu")
     private Integer thuTu;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "loai_cau_hoi", length = 30)
+    private LoaiCauHoi loaiCauHoi = LoaiCauHoi.TRAC_NGHIEM;
+
+    @Column(name = "giai_thich", columnDefinition = "TEXT")
+    private String giaiThich;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chu_de_id", nullable = false)
     private ChuDe chuDe;
 
     @OneToMany(mappedBy = "cauHoi", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("thuTu ASC, id ASC")
     private List<DapAn> danhSachDapAn;
+
+    public LoaiCauHoi getLoaiCauHoi() {
+        return loaiCauHoi != null ? loaiCauHoi : LoaiCauHoi.TRAC_NGHIEM;
+    }
 }

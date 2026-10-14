@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Topic } from '../data';
 import { layTenNguoiChoi } from '../data';
-import { layCauHoiDeChoi, nopBai, type AuthUser, type NopBaiResponseDTO } from '../services/api';
+import { layCauHoiDeChoi, nopBai, xemDapAnLuyenTap, type AuthUser, type NopBaiResponseDTO } from '../services/api';
 import { mapCauHoiToQuestion, type QuestionWithIds } from '../adapters';
+import { restoreDraft, type QuestionAnswerState } from '../quizDraft';
 
 interface Props {
   topic: Topic;
@@ -61,49 +62,33 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
   const [current, setCurrent] = useState(0);
   const [transitionDirection, setTransitionDirection] = useState<'next' | 'previous'>('next');
 
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [answers, setAnswers] = useState<Record<number, QuestionAnswerState>>({});
   const [flagged, setFlagged] = useState<Record<number, boolean>>({});
   const [remainingByQuestion, setRemainingByQuestion] = useState<Record<number, number>>({});
 
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+  const [practice, setPractice] = useState<Record<number, { dung: boolean; dapAnDungText: string; giaiThich: string | null }>>({});
+  const [practiceBusy, setPracticeBusy] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
-  const [startTime] = useState(() => Date.now());
+  const [startTime, setStartTime] = useState(() => Date.now());
   const submitting = useRef(false);
   const timeoutSubmissionAttempted = useRef(false);
 
-  // Khởi tạo câu hỏi và nạp draft (nếu có)
   useEffect(() => {
-    layCauHoiDeChoi(topic.id)
-      .then((data) => {
-        const loadedQuestions = data.map(mapCauHoiToQuestion);
-        setQuestions(loadedQuestions);
-
-        // Khôi phục bản nháp nếu còn trong 3 tiếng
-        let draftAnswers: Record<number, number> = {};
-        let draftFlagged: Record<number, boolean> = {};
-        try {
-          const raw = localStorage.getItem(draftKey);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Date.now() - parsed.savedAt < 3 * 3600 * 1000) {
-              draftAnswers = parsed.answers || {};
-              draftFlagged = parsed.flagged || {};
-            }
-          }
-        } catch {
-          // Bỏ qua lỗi đọc localStorage
-        }
-
-        setAnswers(draftAnswers);
-        setFlagged(draftFlagged);
-        setRemainingByQuestion(
-          Object.fromEntries(loadedQuestions.map((q) => [q.backendId, TIMER_SECONDS])),
-        );
-      })
-      .catch(() => setError('Không tải được câu hỏi cho chủ đề này. Kiểm tra kết nối backend.'))
-      .finally(() => setLoading(false));
+    let alive = true;
+    setLoading(true);
+    layCauHoiDeChoi(topic.id).then(data => {
+      if (!alive) return;
+      let raw: string | null = null;
+      try { raw = localStorage.getItem(draftKey); } catch {}
+      const restored = restoreDraft(raw, data.map(mapCauHoiToQuestion), Date.now());
+      setQuestions(restored.questions); setAnswers(restored.answers); setFlagged(restored.flagged);
+      setRemainingByQuestion(restored.remaining); setCurrent(restored.current); setStartTime(restored.startedAt);
+    }).catch(() => { if (alive) setError('Không tải được câu hỏi cho chủ đề này. Kiểm tra kết nối backend.'); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
   }, [topic.id, draftKey]);
 
   // Tự động lưu tiến độ vào localStorage
@@ -113,28 +98,47 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
       localStorage.setItem(
         draftKey,
         JSON.stringify({
+          version: 2,
           answers,
           flagged,
+          remaining: remainingByQuestion,
+          currentId: questions[current]?.backendId,
+          questionIds: questions.map(q => q.backendId),
+          startedAt: startTime,
           savedAt: Date.now(),
         }),
       );
     } catch {
       // Bỏ qua nếu localStorage đầy
     }
-  }, [answers, flagged, draftKey, questions.length]);
+  }, [answers, flagged, draftKey, questions, remainingByQuestion, current, startTime]);
 
   const question = questions[current];
-  const selectedAnswerId = question ? answers[question.backendId] ?? null : null;
+
+  const isQuestionAnswered = useCallback((item: QuestionWithIds): boolean => {
+    const ans = answers[item.backendId];
+    if (!ans) return false;
+    if (item.loaiCauHoi === 'DIEN_TU') {
+      return Boolean(ans.textAnswer && ans.textAnswer.trim().length > 0);
+    }
+    if (item.loaiCauHoi === 'SAP_XEP') {
+      return Boolean(ans.tokenIds && ans.tokenIds.length > 0);
+    }
+    return ans.dapAnId !== undefined && ans.dapAnId !== null;
+  }, [answers]);
+
+  const currentAnswer = question ? answers[question.backendId] : undefined;
+  const isCurrentAnswered = question ? isQuestionAnswered(question) : false;
   const isCurrentFlagged = question ? Boolean(flagged[question.backendId]) : false;
   const remainingSeconds = question
     ? remainingByQuestion[question.backendId] ?? TIMER_SECONDS
     : TIMER_SECONDS;
-  const answeredCount = Object.keys(answers).length;
+  const answeredCount = questions.filter(isQuestionAnswered).length;
   const unansweredCount = questions.length - answeredCount;
 
-  // Đếm ngược thời gian cho câu hiện tại
+  // Đếm ngược thời gian cho câu hiện tại (đối với trắc nghiệm dừng khi đã chọn)
   useEffect(() => {
-    if (!question || selectedAnswerId !== null || remainingSeconds <= 0 || isSubmitting) return;
+    if (!question || (question.loaiCauHoi === 'TRAC_NGHIEM' && isCurrentAnswered) || remainingSeconds <= 0 || isSubmitting) return;
     const timerId = window.setTimeout(() => {
       setRemainingByQuestion((prev) => ({
         ...prev,
@@ -142,17 +146,17 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
       }));
     }, 1000);
     return () => window.clearTimeout(timerId);
-  }, [question, selectedAnswerId, remainingSeconds, isSubmitting]);
+  }, [question, isCurrentAnswered, remainingSeconds, isSubmitting]);
 
   // Tự động chuyển câu khi hết giờ câu đó
   useEffect(() => {
-    if (!question || selectedAnswerId !== null || remainingSeconds !== 0 || current >= questions.length - 1) return;
+    if (!question || remainingSeconds !== 0 || current >= questions.length - 1) return;
     const advanceId = window.setTimeout(() => {
       setTransitionDirection('next');
       setCurrent((index) => Math.min(index + 1, questions.length - 1));
     }, 350);
     return () => window.clearTimeout(advanceId);
-  }, [question, selectedAnswerId, remainingSeconds, current, questions.length]);
+  }, [question, remainingSeconds, current, questions.length]);
 
   const goToQuestion = (nextIndex: number) => {
     if (nextIndex < 0 || nextIndex >= questions.length || nextIndex === current) return;
@@ -160,10 +164,88 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
     setCurrent(nextIndex);
   };
 
-  const selectAnswer = (answerId: number) => {
+  // Trắc nghiệm: chọn một đáp án
+  const selectChoiceAnswer = (answerId: number) => {
     if (!question || isSubmitting) return;
-    setAnswers((prev) => ({ ...prev, [question.backendId]: answerId }));
+    setAnswers((prev) => ({
+      ...prev,
+      [question.backendId]: {
+        ...prev[question.backendId],
+        dapAnId: answerId,
+      },
+    }));
     setError(null);
+  };
+
+  // Điền từ: nhập nội dung câu trả lời
+  const handleTextAnswerChange = (val: string) => {
+    if (!question || isSubmitting) return;
+    setAnswers((prev) => ({
+      ...prev,
+      [question.backendId]: {
+        ...prev[question.backendId],
+        textAnswer: val,
+      },
+    }));
+    setError(null);
+  };
+
+  // Sắp xếp: thêm token vào chuỗi
+  const handleAddToken = (tokenId: number) => {
+    if (!question || isSubmitting) return;
+    const currentTokens = answers[question.backendId]?.tokenIds || [];
+    if (currentTokens.includes(tokenId)) return;
+    const updated = [...currentTokens, tokenId];
+    setAnswers((prev) => ({
+      ...prev,
+      [question.backendId]: {
+        ...prev[question.backendId],
+        tokenIds: updated,
+      },
+    }));
+    setError(null);
+  };
+
+  // Sắp xếp: gỡ token khỏi chuỗi
+  const handleRemoveToken = (tokenId: number) => {
+    if (!question || isSubmitting) return;
+    const currentTokens = answers[question.backendId]?.tokenIds || [];
+    const updated = currentTokens.filter((id) => id !== tokenId);
+    setAnswers((prev) => ({
+      ...prev,
+      [question.backendId]: {
+        ...prev[question.backendId],
+        tokenIds: updated,
+      },
+    }));
+    setError(null);
+  };
+
+  // Sắp xếp: xóa làm lại
+  const handleResetTokens = () => {
+    if (!question || isSubmitting) return;
+    setAnswers((prev) => ({
+      ...prev,
+      [question.backendId]: {
+        ...prev[question.backendId],
+        tokenIds: [],
+      },
+    }));
+  };
+
+  // Sắp xếp: hoàn tác từ cuối
+  const handleUndoLastToken = () => {
+    if (!question || isSubmitting) return;
+    const currentTokens = answers[question.backendId]?.tokenIds || [];
+    if (currentTokens.length === 0) return;
+    const updated = currentTokens.slice(0, -1);
+    setAnswers((prev) => ({
+      ...prev,
+      [question.backendId]: {
+        ...prev[question.backendId],
+        tokenIds: updated,
+      },
+    }));
   };
 
   const toggleFlag = () => {
@@ -189,11 +271,16 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
         tenNguoiChoi: currentUser?.hoTen || layTenNguoiChoi(),
         userId: currentUser?.id ?? null,
         thoiGianLam: Math.floor((Date.now() - startTime) / 1000),
-        danhSachTraLoi: questions.map((item) => ({
-          cauHoiId: item.backendId,
-          dapAnId: answers[item.backendId] ?? null,
-          thoiGianTraLoi: TIMER_SECONDS - (remainingByQuestion[item.backendId] ?? TIMER_SECONDS),
-        })),
+        danhSachTraLoi: questions.map((item) => {
+          const ans = answers[item.backendId];
+          return {
+            cauHoiId: item.backendId,
+            dapAnId: item.loaiCauHoi === 'TRAC_NGHIEM' || !item.loaiCauHoi ? ans?.dapAnId ?? null : null,
+            cauTraLoiText: item.loaiCauHoi === 'DIEN_TU' ? (ans?.textAnswer ?? '') : null,
+            thuTuTokenIds: item.loaiCauHoi === 'SAP_XEP' ? (ans?.tokenIds ?? []) : null,
+            thoiGianTraLoi: TIMER_SECONDS - (remainingByQuestion[item.backendId] ?? TIMER_SECONDS),
+          };
+        }),
       });
 
       // Xóa bản nháp khi nộp bài thành công
@@ -219,7 +306,6 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
   useEffect(() => {
     if (
       current !== questions.length - 1 ||
-      selectedAnswerId !== null ||
       remainingSeconds !== 0 ||
       isSubmitting ||
       timeoutSubmissionAttempted.current
@@ -231,7 +317,7 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
       void submitQuiz();
     }, 350);
     return () => window.clearTimeout(timeoutId);
-  }, [current, isSubmitting, questions.length, remainingSeconds, selectedAnswerId, submitQuiz]);
+  }, [current, isSubmitting, questions.length, remainingSeconds, submitQuiz]);
 
   const handleExitClick = () => {
     if (answeredCount > 0) {
@@ -344,6 +430,15 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
           {/* VÙNG CÂU HỎI CHÍNH */}
           <main className="quiz-main">
             {error && <p role="alert" className="quiz-error">{error}</p>}
+            {topic.choPhepXemDapAn && question && <div className="quiz-error">
+              <button disabled={practiceBusy || isSubmitting || !isCurrentAnswered} onClick={async () => {
+                setPracticeBusy(true);
+                try { const review = await xemDapAnLuyenTap(question.backendId, { cauHoiId: question.backendId, dapAnId: currentAnswer?.dapAnId, cauTraLoiText: currentAnswer?.textAnswer, thuTuTokenIds: currentAnswer?.tokenIds, thoiGianTraLoi: 0 }); setPractice(prev => ({ ...prev, [question.backendId]: review })); }
+                catch (e) { setError(e instanceof Error ? e.message : 'Không xem được đáp án'); }
+                finally { setPracticeBusy(false); }
+              }}>Xem đáp án luyện tập</button>
+              {practice[question.backendId] && <p>{practice[question.backendId].dung ? 'Đúng' : 'Sai'} — {practice[question.backendId].dapAnDungText}<br />{practice[question.backendId].giaiThich}</p>}
+            </div>}
 
             <div
               key={question.backendId}
@@ -351,9 +446,18 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
             >
               <section className="quiz-question-card" aria-labelledby="quiz-question-title">
                 <div className="quiz-question-card-top flex items-center justify-between">
-                  <div>
+                  <div className="flex items-center gap-2">
                     <span className="quiz-question-chip">CÂU {current + 1}</span>
                     <span className="quiz-question-total">/{questions.length}</span>
+
+                    {/* Huy hiệu loại câu hỏi */}
+                    {question.loaiCauHoi === 'DIEN_TU' ? (
+                      <span className="quiz-type-badge dien-tu">✏️ Điền từ</span>
+                    ) : question.loaiCauHoi === 'SAP_XEP' ? (
+                      <span className="quiz-type-badge sap-xep">🧩 Sắp xếp</span>
+                    ) : (
+                      <span className="quiz-type-badge trac-nghiem">🔘 Trắc nghiệm</span>
+                    )}
                   </div>
 
                   {isCurrentFlagged && (
@@ -365,31 +469,145 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
 
                 {question.image && <img src={question.image} alt="" className="quiz-question-image" />}
                 <h1 id="quiz-question-title">{question.text}</h1>
-                <p className="quiz-select-hint">Chọn một đáp án phù hợp nhất</p>
+
+                <p className="quiz-select-hint">
+                  {question.loaiCauHoi === 'DIEN_TU'
+                    ? 'Nhập câu trả lời của bạn vào ô bên dưới'
+                    : question.loaiCauHoi === 'SAP_XEP'
+                      ? 'Chạm vào các từ bên dưới để ghép thành câu hoàn chỉnh'
+                      : 'Chọn một đáp án phù hợp nhất'}
+                </p>
               </section>
 
-              {/* CÁC ĐÁP ÁN TRẮC NGHIỆM */}
-              <section className="quiz-answers" aria-label="Các phương án trả lời">
-                {question.answers.map((answer, index) => {
-                  const answerId = question.answerIds[index];
-                  const isSelected = answerId === selectedAnswerId;
-                  return (
-                    <button
-                      key={answerId}
-                      type="button"
-                      onClick={() => selectAnswer(answerId)}
-                      aria-pressed={isSelected}
-                      className={`quiz-answer${isSelected ? ' is-selected' : ''}`}
-                    >
-                      <span className="quiz-answer-letter">{answerLetter(index)}</span>
-                      <span className="quiz-answer-text">{answer}</span>
-                      <span className="quiz-answer-radio" aria-hidden="true">
-                        {isSelected ? '✓' : ''}
-                      </span>
-                    </button>
-                  );
-                })}
-              </section>
+              {/* DẠNG 1: ĐIỀN TỪ (DIEN_TU) */}
+              {question.loaiCauHoi === 'DIEN_TU' && (
+                <section className="quiz-fill-wrapper" aria-label="Khu vực điền từ">
+                  <div className="quiz-fill-input-box">
+                    <input
+                      type="text"
+                      value={currentAnswer?.textAnswer ?? ''}
+                      onChange={(e) => handleTextAnswerChange(e.target.value)}
+                      placeholder="Nhập câu trả lời của bạn..."
+                      className="quiz-fill-input"
+                      autoComplete="off"
+                      spellCheck="false"
+                      disabled={isSubmitting}
+                    />
+                    {(currentAnswer?.textAnswer ?? '').length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleTextAnswerChange('')}
+                        className="quiz-fill-clear"
+                        title="Xóa nhanh nội dung"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                  <div className="quiz-fill-hint">
+                    <span>💡</span> Gõ trực tiếp bằng bàn phím. Hệ thống bảo toàn chữ và dấu tiếng Việt / Pinyin.
+                  </div>
+                </section>
+              )}
+
+              {/* DẠNG 2: SẮP XẾP CÂU (SAP_XEP) */}
+              {question.loaiCauHoi === 'SAP_XEP' && (
+                <section className="quiz-reorder-container" aria-label="Khu vực sắp xếp câu">
+                  {/* Vùng câu đang ghép */}
+                  <div className={`quiz-reorder-target${(currentAnswer?.tokenIds?.length ?? 0) > 0 ? ' has-tokens' : ''}`}>
+                    {(currentAnswer?.tokenIds?.length ?? 0) === 0 ? (
+                      <p className="quiz-reorder-placeholder">
+                        Chạm vào các từ bên dưới để ghép thành câu theo thứ tự đúng
+                      </p>
+                    ) : (
+                      (currentAnswer?.tokenIds ?? []).map((tokenId) => {
+                        const token = (question.rawTokens || []).find((t) => t.id === tokenId);
+                        if (!token) return null;
+                        return (
+                          <button
+                            key={token.id}
+                            type="button"
+                            onClick={() => handleRemoveToken(token.id)}
+                            className="quiz-token-chip is-in-assembled"
+                            title="Chạm để gỡ từ này"
+                          >
+                            <span>{token.noiDung}</span>
+                            <span className="text-white/60 text-xs ml-0.5">✕</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Thanh điều khiển phụ của câu sắp xếp */}
+                  <div className="quiz-reorder-controls">
+                    <span className="quiz-reorder-pool-label">Kho từ gợi ý:</span>
+                    <div className="quiz-reorder-actions">
+                      <button
+                        type="button"
+                        onClick={handleUndoLastToken}
+                        disabled={(currentAnswer?.tokenIds?.length ?? 0) === 0 || isSubmitting}
+                        className="quiz-reorder-btn"
+                        title="Gỡ từ vừa ghép gần nhất"
+                      >
+                        ⌫ Xóa từ cuối
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResetTokens}
+                        disabled={(currentAnswer?.tokenIds?.length ?? 0) === 0 || isSubmitting}
+                        className="quiz-reorder-btn"
+                        title="Đặt lại tất cả các từ"
+                      >
+                        ↺ Làm lại
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Kho từ (Word bank) */}
+                  <div className="quiz-reorder-pool">
+                    {(question.rawTokens || []).map((token) => {
+                      const isPlaced = (currentAnswer?.tokenIds ?? []).includes(token.id);
+                      return (
+                        <button
+                          key={token.id}
+                          type="button"
+                          onClick={() => handleAddToken(token.id)}
+                          disabled={isPlaced || isSubmitting}
+                          className={`quiz-token-chip${isPlaced ? ' is-placed' : ''}`}
+                        >
+                          {token.noiDung}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {/* DẠNG 3: TRẮC NGHIỆM A/B/C/D (TRAC_NGHIEM) */}
+              {(question.loaiCauHoi === 'TRAC_NGHIEM' || !question.loaiCauHoi) && (
+                <section className="quiz-answers" aria-label="Các phương án trả lời">
+                  {question.answers.map((answer, index) => {
+                    const answerId = question.answerIds[index];
+                    const isSelected = answerId === (currentAnswer?.dapAnId ?? null);
+                    return (
+                      <button
+                        key={answerId}
+                        type="button"
+                        onClick={() => selectChoiceAnswer(answerId)}
+                        aria-pressed={isSelected}
+                        className={`quiz-answer${isSelected ? ' is-selected' : ''}`}
+                      >
+                        <span className="quiz-answer-letter">{answerLetter(index)}</span>
+                        <span className="quiz-answer-text">{answer}</span>
+                        <span className="quiz-answer-radio" aria-hidden="true">
+                          {isSelected ? '✓' : ''}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </section>
+              )}
             </div>
 
             {/* THANH ĐIỀU HƯỚNG PHÍA DƯỚI (BOTTOM BAR) */}
@@ -467,7 +685,7 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
             {/* LƯỚI SỐ CÂU HỎI: CHỈ HIỂN THỊ SỐ THỨ TỰ (CĂN CHÍNH GIỮA) */}
             <nav aria-label="Điều hướng câu hỏi" className="quiz-question-list">
               {questions.map((item, index) => {
-                const isAnswered = answers[item.backendId] !== undefined;
+                const isAnswered = isQuestionAnswered(item);
                 const isCurrent = index === current;
                 const isItemFlagged = Boolean(flagged[item.backendId]);
 

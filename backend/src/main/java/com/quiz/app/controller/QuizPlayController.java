@@ -19,6 +19,12 @@ import java.util.List;
 public class QuizPlayController {
 
     private final QuizPlayService quizPlayService;
+    private final com.quiz.app.repository.NguoiDungRepository nguoiDungRepository;
+
+    @PostMapping("/luyentap/{id}")
+    public QuizPlayService.PracticeReview practice(@PathVariable Long id, @RequestBody NopBaiRequestDTO.CauTraLoiDTO input) {
+        return quizPlayService.practice(id, input);
+    }
 
     // Lấy danh sách câu hỏi để chơi (không lộ đáp án đúng)
     @GetMapping("/chude/{chuDeId}/cauhoi")
@@ -27,7 +33,16 @@ public class QuizPlayController {
     }
 
     @PostMapping("/nopbai")
-    public ResponseEntity<NopBaiResponseDTO> nopBai(@RequestBody NopBaiRequestDTO request) {
+    public ResponseEntity<NopBaiResponseDTO> nopBai(@jakarta.validation.Valid @RequestBody NopBaiRequestDTO request,
+                                                 org.springframework.security.core.Authentication authentication) {
+        // A client must not be able to write quiz history under another user's ID.
+        request.setUserId(null);
+        if (authentication != null && authentication.isAuthenticated()) {
+            nguoiDungRepository.findByUsername(authentication.getName()).ifPresent(user -> {
+                request.setUserId(user.getId());
+                request.setTenNguoiChoi(user.getHoTen());
+            });
+        }
         return ResponseEntity.ok(quizPlayService.nopBai(request));
     }
 

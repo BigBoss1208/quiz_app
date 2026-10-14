@@ -25,7 +25,7 @@ export function mapChuDeToTopic(dto: ChuDeThongKeDTO, index: number): Topic {
     completion: Math.min(dto.luotChoi * 5, 100),
     gradient: style.gradient,
     shadow: style.shadow,
-    category: dto.danhMuc || 'Khoa học',
+    category: dto.danhMuc || 'Chưa phân nhóm',
     choPhepXemDapAn: dto.choPhepXemDapAn ?? false,
   };
 }
@@ -34,6 +34,8 @@ export function mapChuDeToTopic(dto: ChuDeThongKeDTO, index: number): Topic {
 export interface QuestionWithIds extends Question {
   backendId: number;
   answerIds: number[];
+  loaiCauHoi?: 'TRAC_NGHIEM' | 'DIEN_TU' | 'SAP_XEP';
+  rawTokens?: { id: number; noiDung: string }[];
 }
 
 export function mapCauHoiToQuestion(dto: CauHoiChoiDTO, index: number): QuestionWithIds {
@@ -42,9 +44,11 @@ export function mapCauHoiToQuestion(dto: CauHoiChoiDTO, index: number): Question
     backendId: dto.id,
     text: dto.noiDungCauHoi,
     image: dto.hinhAnh || undefined,
+    loaiCauHoi: dto.loaiCauHoi || 'TRAC_NGHIEM',
     answers: dto.danhSachDapAn.map((a) => a.noiDung),
     answerIds: dto.danhSachDapAn.map((a) => a.id),
     correct: -1, // không biết trước — server mới biết đáp án đúng
+    rawTokens: dto.danhSachDapAn,
   };
 }
 

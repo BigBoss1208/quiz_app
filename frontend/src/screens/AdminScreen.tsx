@@ -1,13 +1,12 @@
+import PhaseDAdmin from '../components/PhaseDAdmin';
+import { layNhomMon, layChuDe } from '../services/api';
 import { useState, useEffect } from 'react';
 import type { Topic } from '../data';
 import {
   themChuDe, xoaChuDe, capNhatChuDe,
-  layCauHoiTheoChuDe, themCauHoi, capNhatCauHoi, xoaCauHoi,
   layDanhSachNguoiDung, layLichSuChoiCuaNguoiDung, layThongKeTongQuan,
-  type CauHoiAdmin, type NguoiDungAdminDTO, type LichSuChoiDTO, type ThongKeTongQuanDTO,
+   type NguoiDungAdminDTO, type LichSuChoiDTO, type ThongKeTongQuanDTO,
 } from '../services/api';
-import ExcelImportCard from '../components/ExcelImportCard';
-import AiQuestionGenerator from '../components/AiQuestionGenerator';
 
 interface Props {
   topics: Topic[];
@@ -28,10 +27,12 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
   const [activeNav, setActiveNav] = useState('Chủ đề');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  const [groups, setGroups] = useState<string[]>([]);
+  useEffect(() => { layNhomMon(true).then(gs => setGroups(gs.map(g => g.ten))).catch(e => alert(e.message)); }, [topics]);
   // ----- Chủ đề -----
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicDesc, setNewTopicDesc] = useState('');
-  const [newTopicCategory, setNewTopicCategory] = useState('Khoa học');
+  const [newTopicCategory, setNewTopicCategory] = useState('');
   const [newChoPhepXemDapAn, setNewChoPhepXemDapAn] = useState(false);
   const [savingTopic, setSavingTopic] = useState(false);
 
@@ -39,9 +40,10 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editCategory, setEditCategory] = useState('Khoa học');
-  const [editChoPhepXemDapAn, setEditChoPhepXemDapAn] = useState(false);
+
   const [savingEdit, setSavingEdit] = useState(false);
 
+  useEffect(() => { if (groups.length && !groups.includes(newTopicCategory)) setNewTopicCategory(groups[0]); }, [groups, newTopicCategory]);
   const handleAddTopic = async () => {
     if (!newTopicName.trim()) return;
     setSavingTopic(true);
@@ -67,7 +69,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
   const startEditTopic = (topic: Topic) => {
     setEditingTopicId(topic.id);
     setEditName(topic.name);
-    setEditDesc('');
+    layChuDe(topic.id).then(dto => { setEditDesc(dto.moTa || ''); }).catch(e => alert(e.message));
     setEditCategory(topic.category);
   };
 
@@ -97,97 +99,6 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
       onTopicsChanged();
     } catch {
       alert('Xóa chủ đề thất bại.');
-    }
-  };
-
-  // ----- Câu hỏi -----
-  const [selectedTopicId, setSelectedTopicId] = useState<string>('');
-  const [questionMode, setQuestionMode] = useState<'manual' | 'excel' | 'ai'>('manual');
-  const [questions, setQuestions] = useState<CauHoiAdmin[]>([]);
-  const [loadingQuestions, setLoadingQuestions] = useState(false);
-
-  const [qText, setQText] = useState('');
-  const [answers, setAnswers] = useState(['', '', '', '']);
-  const [correctIdx, setCorrectIdx] = useState(0);
-  const [savingQuestion, setSavingQuestion] = useState(false);
-
-  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
-  const [editQText, setEditQText] = useState('');
-  const [editAnswers, setEditAnswers] = useState(['', '', '', '']);
-  const [editCorrectIdx, setEditCorrectIdx] = useState(0);
-  const [savingEditQuestion, setSavingEditQuestion] = useState(false);
-
-  useEffect(() => {
-    if (!selectedTopicId && topics.length > 0) setSelectedTopicId(topics[0].id);
-  }, [topics, selectedTopicId]);
-
-  const loadQuestions = (topicId: string) => {
-    if (!topicId) return;
-    setLoadingQuestions(true);
-    layCauHoiTheoChuDe(topicId)
-      .then(setQuestions)
-      .finally(() => setLoadingQuestions(false));
-  };
-
-  useEffect(() => {
-    if (selectedTopicId) loadQuestions(selectedTopicId);
-  }, [selectedTopicId]);
-
-  const handleAddQuestion = async () => {
-    if (!qText.trim() || answers.some((a) => !a.trim()) || !selectedTopicId) return;
-    setSavingQuestion(true);
-    try {
-      await themCauHoi({
-        noiDungCauHoi: qText.trim(),
-        chuDe: { id: Number(selectedTopicId) },
-        danhSachDapAn: answers.map((a, i) => ({ noiDung: a.trim(), laDapAnDung: i === correctIdx })),
-      });
-      setQText('');
-      setAnswers(['', '', '', '']);
-      setCorrectIdx(0);
-      loadQuestions(selectedTopicId);
-      onTopicsChanged();
-    } catch {
-      alert('Thêm câu hỏi thất bại. Kiểm tra backend.');
-    } finally {
-      setSavingQuestion(false);
-    }
-  };
-
-  const startEditQuestion = (q: CauHoiAdmin) => {
-    setEditingQuestionId(q.id!);
-    setEditQText(q.noiDungCauHoi);
-    setEditAnswers(q.danhSachDapAn.map((a) => a.noiDung));
-    setEditCorrectIdx(q.danhSachDapAn.findIndex((a) => a.laDapAnDung));
-  };
-
-  const handleSaveEditQuestion = async () => {
-    if (!editingQuestionId || !editQText.trim() || editAnswers.some((a) => !a.trim())) return;
-    setSavingEditQuestion(true);
-    try {
-      await capNhatCauHoi(editingQuestionId, {
-        noiDungCauHoi: editQText.trim(),
-        chuDe: { id: Number(selectedTopicId) },
-        danhSachDapAn: editAnswers.map((a, i) => ({ noiDung: a.trim(), laDapAnDung: i === editCorrectIdx })),
-      });
-      setEditingQuestionId(null);
-      loadQuestions(selectedTopicId);
-    } catch {
-      alert('Cập nhật câu hỏi thất bại.');
-    } finally {
-      setSavingEditQuestion(false);
-    }
-  };
-
-  const handleDeleteQuestion = async (id?: number) => {
-    if (!id) return;
-    if (!confirm('Xóa câu hỏi này?')) return;
-    try {
-      await xoaCauHoi(id);
-      loadQuestions(selectedTopicId);
-      onTopicsChanged();
-    } catch {
-      alert('Xóa câu hỏi thất bại.');
     }
   };
 
@@ -231,7 +142,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
   return (
     <div className="min-h-screen flex" style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #1a1048 60%, #1d1540 100%)', fontFamily: 'Nunito' }}>
       {sidebarOpen && (
-        <aside className="w-56 flex-shrink-0 flex flex-col"
+        <aside className="w-56 flex-shrink-0 flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-30"
           style={{ background: 'rgba(17, 14, 44, 0.95)', borderRight: '1px solid rgba(167,139,250,0.15)', backdropFilter: 'blur(12px)' }}>
           <div className="p-5" style={{ borderBottom: '1px solid rgba(167,139,250,0.12)' }}>
             <div className="flex items-center gap-2 mb-1">
@@ -242,7 +153,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
           </div>
           <nav className="flex-1 p-3">
             {NAV_ITEMS.map((item) => (
-              <button key={item.label} onClick={() => setActiveNav(item.label)}
+              <button key={item.label} onClick={() => { setActiveNav(item.label); if (window.matchMedia('(max-width: 767px)').matches) setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 text-left transition-all font-semibold text-sm"
                 style={{ background: activeNav === item.label ? 'rgba(108,92,231,0.25)' : 'transparent', color: activeNav === item.label ? '#a78bfa' : 'rgba(255,255,255,0.55)', border: activeNav === item.label ? '1px solid rgba(167,139,250,0.25)' : '1px solid transparent' }}>
                 <span>{item.icon}</span>
@@ -267,7 +178,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
         </aside>
       )}
 
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-w-0 overflow-auto">
         <header className="px-6 py-4 flex items-center justify-between sticky top-0 z-10"
           style={{ background: 'rgba(17, 14, 44, 0.9)', borderBottom: '1px solid rgba(167,139,250,0.12)', backdropFilter: 'blur(12px)' }}>
           <div className="flex items-center gap-3">
@@ -306,9 +217,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
                     placeholder="Mô tả" className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
                   <select value={newTopicCategory} onChange={(e) => setNewTopicCategory(e.target.value)}
                     className="px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }}>
-                    <option value="Khoa học">Khoa học</option>
-                    <option value="Xã hội">Xã hội</option>
-                    <option value="Nghệ thuật">Nghệ thuật</option>
+                    {groups.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                   <button onClick={handleAddTopic} disabled={savingTopic}
                     className="px-4 py-2 rounded-xl font-bold text-sm text-white" style={{ background: '#6C5CE7' }}>
@@ -329,9 +238,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
                           placeholder="Mô tả" className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
                         <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}
                           className="px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }}>
-                          <option value="Khoa học">Khoa học</option>
-                          <option value="Xã hội">Xã hội</option>
-                          <option value="Nghệ thuật">Nghệ thuật</option>
+                          {groups.map(g => <option key={g} value={g}>{g}</option>)}
                         </select>
                       </div>
                       <div className="flex gap-2">
@@ -365,203 +272,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
             </div>
           )}
 
-          {activeNav === 'Câu hỏi' && (
-            topics.length === 0 ? (
-              <div className="rounded-2xl p-12 text-center" style={{ background: "rgba(26,20,64,0.75)", border: "1px solid rgba(167,139,250,0.13)" }}>
-                <span className="text-5xl">📚</span>
-                <p className="text-white/60 font-bold mt-4">Chưa có chủ đề nào.</p>
-                <p className="text-slate-400 text-sm mt-1">Vào tab "Chủ đề" để tạo chủ đề trước, rồi quay lại đây thêm câu hỏi.</p>
-                <button onClick={() => setActiveNav('Chủ đề')}
-                  className="mt-4 px-4 py-2 rounded-xl font-bold text-sm text-white" style={{ background: '#6C5CE7' }}>
-                  Sang tab Chủ đề
-                </button>
-              </div>
-            ) : (
-            <div>
-              <div className="rounded-2xl p-5 mb-4" style={{ background: "rgba(26,20,64,0.8)", border: "1px solid rgba(167,139,250,0.15)", boxShadow: "0 8px 24px rgba(0,0,0,0.25)" }}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                  <div>
-                    <label className="block font-bold text-slate-700 mb-1 text-sm">Chọn chủ đề</label>
-                    <select
-                      value={selectedTopicId}
-                      onChange={(e) => setSelectedTopicId(e.target.value)}
-                      className="px-3 py-2 rounded-xl text-sm font-semibold text-white w-full sm:w-64" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }}
-                    >
-                      {topics.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* 3 nút chuyển Tab chế độ nhập câu hỏi */}
-                  <div className="flex items-center gap-1.5 p-1.5 rounded-2xl self-start sm:self-auto">
-                    <button
-                      type="button"
-                      onClick={() => setQuestionMode('manual')}
-                      className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                        questionMode === 'manual'
-                          ? 'bg-purple-500/20 text-purple-300'
-                          : 'text-white/50 hover:text-white/80'
-                      }`}
-                    >
-                      ✍️ Nhập thủ công
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuestionMode('excel')}
-                      className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                        questionMode === 'excel'
-                          ? 'bg-purple-500/20 text-purple-300'
-                          : 'text-white/50 hover:text-white/80'
-                      }`}
-                    >
-                      📥 Import Excel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQuestionMode('ai')}
-                      className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                        questionMode === 'ai'
-                          ? 'bg-purple-500/20 text-purple-300'
-                          : 'text-white/50 hover:text-white/80'
-                      }`}
-                    >
-                      ✨ Tạo bằng AI
-                    </button>
-                  </div>
-                </div>
-
-                {/* Chế độ 1: Form nhập thủ công */}
-                {questionMode === 'manual' && (
-                  <div className="pt-3" style={{ borderTop: '1px solid rgba(167,139,250,0.15)' }}>
-                    <p className="font-bold text-white/80 mb-2 text-sm">Thêm câu hỏi mới</p>
-                    <textarea
-                      value={qText}
-                      onChange={(e) => setQText(e.target.value)}
-                      placeholder="Nội dung câu hỏi"
-                      className="w-full px-3 py-2 rounded-xl text-sm text-white mb-2" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }}
-                      rows={2}
-                    />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                      {answers.map((a, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <input type="radio" checked={correctIdx === i} onChange={() => setCorrectIdx(i)} />
-                          <input
-                            value={a}
-                            onChange={(e) => {
-                              const next = [...answers];
-                              next[i] = e.target.value;
-                              setAnswers(next);
-                            }}
-                            placeholder={`Đáp án ${String.fromCharCode(65 + i)}`}
-                            className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleAddQuestion}
-                      disabled={savingQuestion}
-                      className="px-4 py-2 rounded-xl font-bold text-sm text-white cursor-pointer transition-opacity"
-                      style={{ background: '#6C5CE7', opacity: savingQuestion ? 0.7 : 1 }}
-                    >
-                      {savingQuestion ? 'Đang lưu...' : '+ Thêm câu hỏi'}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Chế độ 2: Import câu hỏi bằng file Excel */}
-              {questionMode === 'excel' && (
-                <ExcelImportCard
-                  chuDeId={Number(selectedTopicId)}
-                  onSuccess={() => {
-                    loadQuestions(selectedTopicId);
-                    onTopicsChanged();
-                  }}
-                />
-              )}
-
-              {/* Chế độ 3: Tạo câu hỏi tự động bằng AI */}
-              {questionMode === 'ai' && (
-                <AiQuestionGenerator
-                  chuDeId={Number(selectedTopicId)}
-                  defaultTopicName={topics.find((t) => t.id === selectedTopicId)?.name}
-                  onSuccess={() => {
-                    loadQuestions(selectedTopicId);
-                    onTopicsChanged();
-                  }}
-                />
-              )}
-
-              {loadingQuestions ? (
-                <p className="text-white/40 text-sm">Đang tải...</p>
-              ) : (
-                <div className="space-y-3">
-                  {questions.map((q) => (
-                    editingQuestionId === q.id ? (
-                      <div key={q.id} className="rounded-2xl p-4" style={{ background: "rgba(26,20,64,0.85)", border: "1.5px solid #a78bfa" }}>
-                        <p className="font-bold text-white/80 mb-2 text-sm">Sửa câu hỏi</p>
-                        <textarea value={editQText} onChange={(e) => setEditQText(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl text-sm text-white mb-2" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} rows={2} />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                          {editAnswers.map((a, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <input type="radio" checked={editCorrectIdx === i} onChange={() => setEditCorrectIdx(i)} />
-                              <input value={a} onChange={(e) => {
-                                const next = [...editAnswers];
-                                next[i] = e.target.value;
-                                setEditAnswers(next);
-                              }} placeholder={`Đáp án ${String.fromCharCode(65 + i)}`}
-                                className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex gap-2">
-                          <button onClick={handleSaveEditQuestion} disabled={savingEditQuestion}
-                            className="px-4 py-2 rounded-xl font-bold text-sm text-white" style={{ background: '#6C5CE7' }}>
-                            {savingEditQuestion ? 'Đang lưu...' : 'Lưu'}
-                          </button>
-                          <button onClick={() => setEditingQuestionId(null)}
-                            className="px-4 py-2 rounded-xl font-bold text-sm text-white/50 hover:text-white/80" style={{ background: "rgba(255,255,255,0.06)" }}>
-                            Hủy
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div key={q.id} className="rounded-2xl p-4" style={{ background: "rgba(26,20,64,0.75)", border: "1px solid rgba(167,139,250,0.13)" }}>
-                        <div className="flex items-start gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-bold text-white text-sm mb-2 leading-snug">{q.noiDungCauHoi}</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                              {q.danhSachDapAn.map((a, i) => (
-                                <div key={i} className="flex items-center gap-1.5 text-xs px-2 py-1.5 rounded-lg"
-                                  style={{ background: a.laDapAnDung ? 'rgba(16,213,160,0.15)' : 'rgba(255,255,255,0.05)', color: a.laDapAnDung ? '#10d5a0' : 'rgba(255,255,255,0.5)' }}>
-                                  <span className="font-bold">{String.fromCharCode(65 + i)}.</span>
-                                  <span className="flex-1">{a.noiDung}</span>
-                                  {a.laDapAnDung && <span>✓</span>}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-1 flex-shrink-0">
-                            <button onClick={() => startEditQuestion(q)}
-                              className="p-1.5 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-white/60 transition-colors text-sm">✏️</button>
-                            <button onClick={() => handleDeleteQuestion(q.id)}
-                              className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors text-sm">🗑️</button>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  ))}
-                </div>
-              )}
-            </div>
-            )
-          )}
+          {activeNav === 'Câu hỏi' && <PhaseDAdmin topics={topics} onChanged={onTopicsChanged} />}
 
           {activeNav === 'Người dùng' && (
             loadingUsers ? (

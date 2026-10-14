@@ -3,7 +3,7 @@
 // Production: lấy từ biến môi trường VITE_API_URL
 
 const BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+  import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://quiz-app-10-kln9.onrender.com/api' : 'http://localhost:8080/api');
 
 export interface AuthUser {
   token: string;
@@ -15,9 +15,29 @@ export interface AuthUser {
 
 const AUTH_KEY = 'quiz_auth';
 
+export interface NhomMon { id: number; ten: string; hienThi: boolean; thuTu: number }
+export const layNhomMon = (admin = false) => request<NhomMon[]>(admin ? '/admin/nhom-mon' : '/nhom-mon');
+export const luuNhomMon = (g: Omit<NhomMon, 'id'> & { id?: number }) => request<NhomMon>(`/admin/nhom-mon${g.id ? '/' + g.id : ''}`, { method: g.id ? 'PUT' : 'POST', body: JSON.stringify(g) });
+export const xoaNhomMon = (id: number) => request<void>(`/admin/nhom-mon/${id}`, { method: 'DELETE' });
+export const xacNhanImport = (questions: CauHoiAdmin[]) => request<number>('/admin/import/confirm', { method: 'POST', body: JSON.stringify(questions) });
+export async function xemTruocImport(file: File, chuDeId: number): Promise<{ questions: CauHoiAdmin[]; warnings: string[] }> {
+  const form = new FormData(); form.append('file', file); form.append('chuDeId', String(chuDeId));
+  const res = await fetch(`${BASE_URL}/admin/import/preview`, { method: 'POST', headers: { Authorization: `Bearer ${layAuth()?.token || ''}` }, body: form });
+  if (!res.ok) throw new Error(await res.text()); return res.json();
+}
+export async function taiMauImport(format: string, type: string) {
+  const res = await fetch(`${BASE_URL}/admin/import/template?format=${format}&type=${type}`, { headers: { Authorization: `Bearer ${layAuth()?.token || ''}` } });
+  if (!res.ok) throw new Error(await res.text());
+  const url = URL.createObjectURL(await res.blob()); const a = document.createElement('a'); a.href = url; a.download = `questions-${type}.${format}`; a.click(); URL.revokeObjectURL(url);
+}
+
 export function layAuth(): AuthUser | null {
-  const raw = localStorage.getItem(AUTH_KEY);
-  return raw ? JSON.parse(raw) : null;
+  try {
+    const raw = localStorage.getItem(AUTH_KEY);
+    if (!raw) return null;
+    const user = JSON.parse(raw);
+    return user && typeof user.token === 'string' && typeof user.id === 'number' && ['ADMIN','USER'].includes(user.vaiTro) ? user : null;
+  } catch { return null; }
 }
 
 export function luuAuth(user: AuthUser) {
@@ -97,6 +117,10 @@ export interface ChuDeThongKeDTO {
 }
 
 export interface ChuDeDTO {
+  nhomMon?: { id: number };
+  hienDapAnSauNop?: boolean;
+  xaoTronCauHoi?: boolean;
+  xaoTronLuaChon?: boolean;
   id: number;
   tenChuDe: string;
   hinhAnh: string | null;
@@ -115,6 +139,7 @@ export interface CauHoiChoiDTO {
   id: number;
   noiDungCauHoi: string;
   hinhAnh: string | null;
+  loaiCauHoi?: 'TRAC_NGHIEM' | 'DIEN_TU' | 'SAP_XEP';
   danhSachDapAn: DapAnChoiDTO[];
 }
 
@@ -126,7 +151,9 @@ export interface TraLoiResponseDTO {
 
 export interface CauTraLoiNopBaiDTO {
   cauHoiId: number;
-  dapAnId: number | null;
+  dapAnId?: number | null;
+  cauTraLoiText?: string | null;
+  thuTuTokenIds?: number[] | null;
   thoiGianTraLoi: number;
 }
 
@@ -134,9 +161,14 @@ export interface CauHoiReviewDTO {
   cauHoiId: number;
   noiDungCauHoi: string;
   hinhAnh: string | null;
+  loaiCauHoi?: 'TRAC_NGHIEM' | 'DIEN_TU' | 'SAP_XEP';
   danhSachDapAn: DapAnChoiDTO[];
   dapAnDaChonId: number | null;
-  dapAnDungId: number;
+  dapAnDungId: number | null;
+  cauTraLoiText?: string | null;
+  dapAnDungText?: string | null;
+  thuTuTokenIdsDaChon?: number[] | null;
+  thuTuTokenIdsDung?: number[] | null;
   ketQua: 'DUNG' | 'SAI' | 'CHUA_TRA_LOI';
   giaiThich: string | null;
 }
@@ -155,16 +187,19 @@ export interface NopBaiResponseDTO {
 // ===== Kiểu dữ liệu Admin CRUD câu hỏi =====
 
 export interface DapAnAdmin {
+  thuTu?: number;
   id?: number;
   noiDung: string;
   laDapAnDung: boolean;
 }
 
 export interface CauHoiAdmin {
+  loaiCauHoi?: "TRAC_NGHIEM" | "DIEN_TU" | "SAP_XEP";
+  giaiThich?: string | null;
   id?: number;
   noiDungCauHoi: string;
   hinhAnh?: string | null;
-  thuTu?: number;
+  thuTu?: number | null;
   chuDe: {
     id: number;
   };
@@ -337,6 +372,8 @@ export const guiDapAn = (
       dapAnId,
     }),
   });
+
+export const xemDapAnLuyenTap = (id: number, answer: CauTraLoiNopBaiDTO) => request<{ dung: boolean; dapAnDungText: string; giaiThich: string | null }>(`/choi/luyentap/${id}`, { method: 'POST', body: JSON.stringify(answer) });
 
 export const nopBai = (data: {
   chuDeId: number;

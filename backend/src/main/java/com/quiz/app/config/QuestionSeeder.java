@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name="app.seed.enabled", havingValue="true")
 @RequiredArgsConstructor
 public class QuestionSeeder implements CommandLineRunner {
 
@@ -69,6 +70,91 @@ public class QuestionSeeder implements CommandLineRunner {
             }
             System.out.println(">>> Đã thêm " + danhSachCauHoi.size() + " câu hỏi cho chủ đề: " + chuDe.getTenChuDe());
         });
+
+        seedCauHoiDaDang(tatCaChuDe);
+    }
+
+    // Seed bổ sung câu hỏi dạng Điền từ (DIEN_TU) và Sắp xếp câu (SAP_XEP)
+    private void seedCauHoiDaDang(List<ChuDe> tatCaChuDe) {
+        if (tatCaChuDe.isEmpty()) return;
+
+        // Tìm chủ đề Văn học hoặc Lịch sử
+        ChuDe chuDe = tatCaChuDe.stream()
+                .filter(c -> c.getTenChuDe().toLowerCase().contains("văn") || c.getTenChuDe().toLowerCase().contains("lịch"))
+                .findFirst()
+                .orElse(tatCaChuDe.get(0));
+
+        // Kiểm tra xem đã có câu hỏi dạng DIEN_TU chưa
+        boolean daCoDienTu = cauHoiRepository.findByChuDeIdOrderByThuTuAsc(chuDe.getId()).stream()
+                .anyMatch(c -> c.getLoaiCauHoi() == CauHoi.LoaiCauHoi.DIEN_TU);
+
+        if (!daCoDienTu) {
+            int thuTu = (int) cauHoiRepository.countByChuDeId(chuDe.getId()) + 1;
+
+            // 1. Câu hỏi Điền từ 1: Thủ đô
+            CauHoi qDienTu1 = new CauHoi();
+            qDienTu1.setNoiDungCauHoi("Thủ đô của nước Cộng hòa Xã hội Chủ nghĩa Việt Nam là thành phố nào?");
+            qDienTu1.setLoaiCauHoi(CauHoi.LoaiCauHoi.DIEN_TU);
+            qDienTu1.setChuDe(chuDe);
+            qDienTu1.setThuTu(thuTu++);
+            qDienTu1.setGiaiThich("Hà Nội là thủ đô của Việt Nam từ năm 1976.");
+
+            DapAn dt1A = new DapAn(null, "Hà Nội", true, null, qDienTu1);
+            DapAn dt1B = new DapAn(null, "Thành phố Hà Nội", true, null, qDienTu1);
+            DapAn dt1C = new DapAn(null, "Ha Noi", true, null, qDienTu1);
+            qDienTu1.setDanhSachDapAn(List.of(dt1A, dt1B, dt1C));
+            cauHoiRepository.save(qDienTu1);
+
+            // 2. Câu hỏi Điền từ 2: Tuyên ngôn độc lập
+            CauHoi qDienTu2 = new CauHoi();
+            qDienTu2.setNoiDungCauHoi("Chủ tịch Hồ Chí Minh đã đọc Tuyên ngôn Độc lập tại Quảng trường nào?");
+            qDienTu2.setLoaiCauHoi(CauHoi.LoaiCauHoi.DIEN_TU);
+            qDienTu2.setChuDe(chuDe);
+            qDienTu2.setThuTu(thuTu++);
+            qDienTu2.setGiaiThich("Ngày 2/9/1945 tại Quảng trường Ba Đình, Hà Nội.");
+
+            DapAn dt2A = new DapAn(null, "Ba Đình", true, null, qDienTu2);
+            DapAn dt2B = new DapAn(null, "Quảng trường Ba Đình", true, null, qDienTu2);
+            qDienTu2.setDanhSachDapAn(List.of(dt2A, dt2B));
+            cauHoiRepository.save(qDienTu2);
+
+            // 3. Câu hỏi Sắp xếp câu 1: Tục ngữ
+            CauHoi qSapXep1 = new CauHoi();
+            qSapXep1.setNoiDungCauHoi("Hãy sắp xếp các từ sau để tạo thành câu tục ngữ hoàn chỉnh về lòng biết ơn:");
+            qSapXep1.setLoaiCauHoi(CauHoi.LoaiCauHoi.SAP_XEP);
+            qSapXep1.setChuDe(chuDe);
+            qSapXep1.setThuTu(thuTu++);
+            qSapXep1.setGiaiThich("Câu tục ngữ hoàn chỉnh: \"Ăn quả nhớ kẻ trồng cây\"");
+
+            DapAn sx1A = new DapAn(null, "Ăn", true, 0, qSapXep1);
+            DapAn sx1B = new DapAn(null, "quả", true, 1, qSapXep1);
+            DapAn sx1C = new DapAn(null, "nhớ", true, 2, qSapXep1);
+            DapAn sx1D = new DapAn(null, "kẻ", true, 3, qSapXep1);
+            DapAn sx1E = new DapAn(null, "trồng", true, 4, qSapXep1);
+            DapAn sx1F = new DapAn(null, "cây", true, 5, qSapXep1);
+            qSapXep1.setDanhSachDapAn(List.of(sx1A, sx1B, sx1C, sx1D, sx1E, sx1F));
+            cauHoiRepository.save(qSapXep1);
+
+            // 4. Câu hỏi Sắp xếp câu 2: Danh ngôn Bác Hồ
+            CauHoi qSapXep2 = new CauHoi();
+            qSapXep2.setNoiDungCauHoi("Hãy sắp xếp các từ sau thành chân lý bất hủ của Chủ tịch Hồ Chí Minh:");
+            qSapXep2.setLoaiCauHoi(CauHoi.LoaiCauHoi.SAP_XEP);
+            qSapXep2.setChuDe(chuDe);
+            qSapXep2.setThuTu(thuTu++);
+            qSapXep2.setGiaiThich("Chân lý: \"Không có gì quý hơn độc lập tự do\"");
+
+            DapAn sx2A = new DapAn(null, "Không", true, 0, qSapXep2);
+            DapAn sx2B = new DapAn(null, "có", true, 1, qSapXep2);
+            DapAn sx2C = new DapAn(null, "gì", true, 2, qSapXep2);
+            DapAn sx2D = new DapAn(null, "quý", true, 3, qSapXep2);
+            DapAn sx2E = new DapAn(null, "hơn", true, 4, qSapXep2);
+            DapAn sx2F = new DapAn(null, "độc lập", true, 5, qSapXep2);
+            DapAn sx2G = new DapAn(null, "tự do", true, 6, qSapXep2);
+            qSapXep2.setDanhSachDapAn(List.of(sx2A, sx2B, sx2C, sx2D, sx2E, sx2F, sx2G));
+            cauHoiRepository.save(qSapXep2);
+
+            System.out.println(">>> Đã seed thành công 4 câu hỏi nâng cao (Điền từ & Sắp xếp câu)");
+        }
     }
 
     private List<Q> cauHoiToanHoc() {

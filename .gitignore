@@ -1,6 +1,17 @@
 # Frontend
 frontend/node_modules
 frontend/dist
+.m2/
+frontend/test-results/
+frontend/playwright-report/
+tools/repair-draft.cjs
+/package-lock.json
+reset client/*.http
+.env
+.env.local
+backend/.env*
+*.log
+backend/qa-results/
 
 # Backend
 backend/target
