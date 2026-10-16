@@ -125,7 +125,7 @@ export default function AiQuestionGenerator({
   };
 
   return (
-    <div className="bg-white rounded-2xl p-5 mb-5 shadow-sm border border-slate-100">
+    <div className="admin-ai-generator bg-white rounded-2xl p-5 mb-5 shadow-sm border border-slate-100">
       {/* Header khu vực AI Generator */}
       <div className="mb-4 pb-3 border-b border-slate-100">
         <h3 className="font-bold text-slate-800 text-base flex items-center gap-2">

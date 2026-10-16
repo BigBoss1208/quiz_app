@@ -1,3 +1,4 @@
+import AdminSubmissionScreen from './AdminSubmissionScreen';
 import PhaseDAdmin from '../components/PhaseDAdmin';
 import { layNhomMon, layChuDe } from '../services/api';
 import { useState, useEffect } from 'react';
@@ -17,19 +18,25 @@ interface Props {
 
 const NAV_ITEMS = [
   { icon: '📊', label: 'Dashboard' },
-  { icon: '📚', label: 'Chủ đề' },
-  { icon: '❓', label: 'Câu hỏi' },
+  { icon: '▣', label: 'Quản lý môn học' },
+  { icon: '☷', label: 'Danh sách câu hỏi' },
+  { icon: '+', label: 'Tạo câu hỏi' },
+  { icon: '⇧', label: 'Import câu hỏi' },
+  { icon: '⚙', label: 'Cấu hình đề thi' },
   { icon: '👥', label: 'Người dùng' },
   { icon: '📈', label: 'Thống kê' },
 ];
 
 export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout }: Props) {
-  const [activeNav, setActiveNav] = useState('Chủ đề');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedResultId, setSelectedResultId] = useState<number | null>(null);
+  const [activeNav, setActiveNav] = useState('Quản lý môn học');
+  const [sidebarOpen, setSidebarOpen] = useState(() => !window.matchMedia('(max-width: 767px)').matches);
 
   const [groups, setGroups] = useState<string[]>([]);
   useEffect(() => { layNhomMon(true).then(gs => setGroups(gs.map(g => g.ten))).catch(e => alert(e.message)); }, [topics]);
   // ----- Chủ đề -----
+  const [topicSearch, setTopicSearch] = useState('');
+  const [topicGroupFilter, setTopicGroupFilter] = useState('');
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicDesc, setNewTopicDesc] = useState('');
   const [newTopicCategory, setNewTopicCategory] = useState('');
@@ -39,7 +46,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
-  const [editCategory, setEditCategory] = useState('Khoa học');
+  const [editCategory, setEditCategory] = useState('');
 
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -69,7 +76,8 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
   const startEditTopic = (topic: Topic) => {
     setEditingTopicId(topic.id);
     setEditName(topic.name);
-    layChuDe(topic.id).then(dto => { setEditDesc(dto.moTa || ''); }).catch(e => alert(e.message));
+    setSavingEdit(true);
+    layChuDe(topic.id).then(dto => { setEditDesc(dto.moTa || ''); }).catch(e => { alert(e.message); setEditingTopicId(null); }).finally(() => setSavingEdit(false));
     setEditCategory(topic.category);
   };
 
@@ -77,11 +85,13 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
     if (!editingTopicId || !editName.trim()) return;
     setSavingEdit(true);
     try {
+      const existing = await layChuDe(editingTopicId);
       await capNhatChuDe(Number(editingTopicId), {
+        ...existing,
         tenChuDe: editName.trim(),
         moTa: editDesc.trim(),
-        doKho: 'DE',
         danhMuc: editCategory,
+        nhomMon: undefined,
       });
       setEditingTopicId(null);
       onTopicsChanged();
@@ -112,7 +122,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
   useEffect(() => {
     if (activeNav === 'Người dùng') {
       setLoadingUsers(true);
-      layDanhSachNguoiDung().then(setUsers).finally(() => setLoadingUsers(false));
+      layDanhSachNguoiDung().then(setUsers).catch(e => alert(e.message)).finally(() => setLoadingUsers(false));
     }
   }, [activeNav]);
 
@@ -125,6 +135,7 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
     setLoadingHistory(true);
     layLichSuChoiCuaNguoiDung(userId)
       .then(setUserHistory)
+      .catch(e => alert(e.message))
       .finally(() => setLoadingHistory(false));
   };
 
@@ -135,12 +146,14 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
   useEffect(() => {
     if (activeNav === 'Thống kê') {
       setLoadingTongQuan(true);
-      layThongKeTongQuan().then(setTongQuan).finally(() => setLoadingTongQuan(false));
+      layThongKeTongQuan().then(setTongQuan).catch(e => alert(e.message)).finally(() => setLoadingTongQuan(false));
     }
   }, [activeNav]);
 
+  if (selectedResultId !== null) return <AdminSubmissionScreen id={selectedResultId} onBack={() => setSelectedResultId(null)} />;
+
   return (
-    <div className="min-h-screen flex" style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #1a1048 60%, #1d1540 100%)', fontFamily: 'Nunito' }}>
+    <div className="admin-shell min-h-screen flex" style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #1a1048 60%, #1d1540 100%)', fontFamily: 'Nunito' }}>
       {sidebarOpen && (
         <aside className="w-56 flex-shrink-0 flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-30"
           style={{ background: 'rgba(17, 14, 44, 0.95)', borderRight: '1px solid rgba(167,139,250,0.15)', backdropFilter: 'blur(12px)' }}>
@@ -182,15 +195,15 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
         <header className="px-6 py-4 flex items-center justify-between sticky top-0 z-10"
           style={{ background: 'rgba(17, 14, 44, 0.9)', borderBottom: '1px solid rgba(167,139,250,0.12)', backdropFilter: 'blur(12px)' }}>
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen((s) => !s)} className="p-2 rounded-lg transition-colors text-white/50 hover:text-white/80"
+            <button aria-label="Mở/đóng menu quản trị" onClick={() => setSidebarOpen((s) => !s)} className="p-2 rounded-lg transition-colors text-white/50 hover:text-white/80"
               style={{ background: 'rgba(255,255,255,0.06)' }}>☰</button>
             <h2 className="font-black text-white text-lg" style={{ fontFamily: 'Baloo 2' }}>
-              {activeNav === 'Câu hỏi' ? '❓ Quản lý câu hỏi' : activeNav === 'Chủ đề' ? '📚 Quản lý chủ đề' : activeNav === 'Dashboard' ? '📊 Dashboard' : activeNav}
+              {activeNav}
             </h2>
           </div>
         </header>
 
-        <div className="p-6">
+        <div className="p-6 admin-content"><p className="admin-breadcrumb">Trang chủ <span>›</span> Quản trị <span>›</span> {activeNav}</p>
           {activeNav === 'Dashboard' && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
@@ -206,15 +219,16 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
             </div>
           )}
 
-          {activeNav === 'Chủ đề' && (
+          {activeNav === 'Quản lý môn học' && (
+            <div className="admin-subject-layout"><PhaseDAdmin topics={topics} onChanged={onTopicsChanged} page={activeNav} onNavigate={setActiveNav} />
             <div>
               <div className="rounded-2xl p-5 mb-4" style={{ background: "rgba(26,20,64,0.8)", border: "1px solid rgba(167,139,250,0.15)", boxShadow: "0 8px 24px rgba(0,0,0,0.25)" }}>
                 <p className="font-bold text-white/80 mb-3 text-sm">Thêm chủ đề mới</p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input value={newTopicName} onChange={(e) => setNewTopicName(e.target.value)}
-                    placeholder="Tên chủ đề" className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
+                    aria-label="Tên chủ đề" placeholder="Tên chủ đề" className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
                   <input value={newTopicDesc} onChange={(e) => setNewTopicDesc(e.target.value)}
-                    placeholder="Mô tả" className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
+                    aria-label="Mô tả chủ đề" placeholder="Mô tả" className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
                   <select value={newTopicCategory} onChange={(e) => setNewTopicCategory(e.target.value)}
                     className="px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }}>
                     {groups.map(g => <option key={g} value={g}>{g}</option>)}
@@ -226,16 +240,16 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {topics.map((topic) => (
+              <div className="admin-topic-filters"><input aria-label="Tìm kiếm chủ đề" placeholder="Tìm chủ đề…" value={topicSearch} onChange={e => setTopicSearch(e.target.value)} /><select aria-label="Lọc nhóm môn" value={topicGroupFilter} onChange={e => setTopicGroupFilter(e.target.value)}><option value="">Tất cả nhóm môn</option>{groups.map(g => <option key={g} value={g}>{g}</option>)}</select></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {topics.filter(t => (!topicGroupFilter || t.category === topicGroupFilter) && t.name.toLocaleLowerCase().includes(topicSearch.toLocaleLowerCase())).map((topic) => (
                   editingTopicId === topic.id ? (
                     <div key={topic.id} className="rounded-2xl p-4 col-span-1 sm:col-span-2" style={{ background: "rgba(26,20,64,0.85)", border: "1.5px solid #a78bfa", boxShadow: "0 0 20px rgba(108,92,231,0.2)" }}>
                       <p className="font-bold text-white/80 mb-2 text-sm">Sửa chủ đề</p>
                       <div className="flex flex-col sm:flex-row gap-2 mb-2">
                         <input value={editName} onChange={(e) => setEditName(e.target.value)}
-                          placeholder="Tên chủ đề" className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
+                          aria-label="Tên chủ đề" placeholder="Tên chủ đề" className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
                         <input value={editDesc} onChange={(e) => setEditDesc(e.target.value)}
-                          placeholder="Mô tả" className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
+                          aria-label="Mô tả chủ đề" placeholder="Mô tả" className="flex-1 px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }} />
                         <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}
                           className="px-3 py-2 rounded-xl text-sm text-white" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(167,139,250,0.2)" }}>
                           {groups.map(g => <option key={g} value={g}>{g}</option>)}
@@ -261,18 +275,19 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
                         <p className="font-bold text-white">{topic.name}</p>
                         <p className="text-white/50 text-xs font-semibold">{topic.questions} câu hỏi · {topic.category}</p>
                       </div>
-                      <button onClick={() => startEditTopic(topic)}
+                      <button aria-label={`Sửa chủ đề ${topic.name}`} onClick={() => startEditTopic(topic)}
                         className="p-1.5 rounded-lg hover:bg-slate-50 text-sm transition-colors">✏️</button>
-                      <button onClick={() => handleDeleteTopic(topic.id)}
+                      <button aria-label={`Xóa chủ đề ${topic.name}`} onClick={() => handleDeleteTopic(topic.id)}
                         className="p-1.5 rounded-lg hover:bg-red-50 text-sm transition-colors">🗑️</button>
                     </div>
                   )
                 ))}
               </div>
             </div>
+            </div>
           )}
 
-          {activeNav === 'Câu hỏi' && <PhaseDAdmin topics={topics} onChanged={onTopicsChanged} />}
+          {['Danh sách câu hỏi', 'Tạo câu hỏi', 'Import câu hỏi', 'Cấu hình đề thi'].includes(activeNav) && <PhaseDAdmin topics={topics} onChanged={onTopicsChanged} page={activeNav} onNavigate={setActiveNav} />}
 
           {activeNav === 'Người dùng' && (
             loadingUsers ? (
@@ -316,10 +331,10 @@ export default function AdminScreen({ topics, onBack, onTopicsChanged, onLogout 
                         ) : (
                           <div className="space-y-2">
                             {userHistory.map((h) => (
-                              <div key={h.ketQuaId} className="flex items-center justify-between rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.06)" }}>
+                              <div key={h.ketQuaId} className="flex flex-wrap gap-3 items-center justify-between rounded-xl px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.06)" }}>
                                 <span className="font-semibold text-white/80">{h.tenChuDe}</span>
                                 <span className="text-white/40 text-xs">{h.soCauDaTraLoi} câu · {new Date(h.thoiGianLam).toLocaleString('vi-VN')}</span>
-                                <span className="font-bold text-purple-300">{h.diemSo} điểm</span>
+                                <span className="font-bold text-purple-300">{h.diemSo} điểm</span><button className="px-3 py-2 rounded-lg bg-purple-600 text-white font-bold" onClick={() => setSelectedResultId(h.ketQuaId)}>Xem bài làm</button>
                               </div>
                             ))}
                           </div>

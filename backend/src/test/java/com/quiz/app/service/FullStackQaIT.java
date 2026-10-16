@@ -31,6 +31,9 @@ class FullStackQaIT {
     }
     @LocalServerPort int port;
     @Autowired NguoiDungRepository users;
+    @Autowired KetQuaRepository results;
+    @Autowired KetQuaChiTietRepository snapshots;
+    @Autowired QuizPlayService play;
     @Autowired ChuDeRepository topics;
     @Autowired NhomMonRepository groups;
     @Autowired CauHoiService questions;
@@ -39,10 +42,22 @@ class FullStackQaIT {
         try(Connection c=pg.getPostgresDatabase().getConnection();Statement s=c.createStatement()) {s.execute(Files.readString(Path.of("src/main/resources/db/migration/V20261013__phase_d.sql")));}
         for(String role:List.of("ADMIN","USER")) {NguoiDung u=new NguoiDung();u.setUsername("qa_"+role.toLowerCase());u.setHoTen("QA "+role);u.setVaiTro(NguoiDung.VaiTro.valueOf(role));u.setMatKhau(encoder.encode(testPassword));users.save(u);}
         ChuDe topic=new ChuDe();topic.setTenChuDe("QA Demo");topic.setMoTa("Disposable local QA fixture");topic.setDoKho("DE");topic.setNhomMon(groups.findByTenIgnoreCase("Khoa học").orElseThrow());topic.setDanhMuc("Khoa học");topic.setHienDapAnSauNop(true);topic.setChoPhepXemDapAn(true);topic=topics.save(topic);
+        KetQua legacy=new KetQua();legacy.setChuDe(topic);legacy.setTenNguoiChoi("QA old score");legacy.setUserId(users.findByUsername("qa_user").orElseThrow().getId());legacy.setDiemSo(123);results.save(legacy);
         for(var kind:CauHoi.LoaiCauHoi.values()) {
             CauHoi q=new CauHoi();q.setChuDe(topic);q.setLoaiCauHoi(kind);q.setNoiDungCauHoi(kind==CauHoi.LoaiCauHoi.TRAC_NGHIEM?"QA: Thủ đô Việt Nam?":kind==CauHoi.LoaiCauHoi.DIEN_TU?"QA: 中国 nghĩa là gì?":"QA: Sắp xếp câu");q.setGiaiThich("QA explanation");
             List<String> texts=kind==CauHoi.LoaiCauHoi.TRAC_NGHIEM?List.of("Hà Nội","Huế","Đà Nẵng","Hải Phòng"):kind==CauHoi.LoaiCauHoi.DIEN_TU?List.of("Trung Quốc","中国"):List.of("我","学习","中文");
             List<DapAn> answers=new ArrayList<>();for(int i=0;i<texts.size();i++)answers.add(new DapAn(null,texts.get(i),kind==CauHoi.LoaiCauHoi.DIEN_TU||i==0,i,null));q.setDanhSachDapAn(answers);questions.them(q);
+        }
+    }
+    @Test void snapshotFailureRollsBackScore() throws Exception {
+        long before=results.count(), detailsBefore=snapshots.count();
+        try(Connection c=pg.getPostgresDatabase().getConnection();Statement s=c.createStatement()) {
+            s.execute("ALTER TABLE ket_qua_chi_tiet ADD CONSTRAINT qa_reject_snapshot CHECK (length(snapshot_json)<1) NOT VALID");
+            try {
+                var request=new com.quiz.app.dto.NopBaiRequestDTO();request.setChuDeId(topics.findAll().get(0).getId());
+                assertThrows(RuntimeException.class,()->play.nopBai(request));
+                assertEquals(before,results.count());assertEquals(detailsBefore,snapshots.count());
+            } finally {s.execute("ALTER TABLE ket_qua_chi_tiet DROP CONSTRAINT qa_reject_snapshot");}
         }
     }
     @Test void runDesktopMobileAndApiQa() throws Exception {

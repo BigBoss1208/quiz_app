@@ -34,6 +34,7 @@ public class QuizPlayService {
     private final CauHoiRepository cauHoiRepository;
     private final DapAnRepository dapAnRepository;
     private final KetQuaRepository ketQuaRepository;
+    private final BaiLamAdminService baiLamAdminService;
 
     public record PracticeReview(boolean dung, String dapAnDungText, String giaiThich) {}
 
@@ -298,6 +299,10 @@ public class QuizPlayService {
         String tenNguoiChoi = request.getTenNguoiChoi() == null || request.getTenNguoiChoi().isBlank()
                 ? "Khách" : request.getTenNguoiChoi().trim();
         KetQua ketQua = luuKetQua(chuDe.getId(), tenNguoiChoi, request.getUserId(), diemSo, answeredCount);
+
+        NopBaiResponseDTO fullReview = new NopBaiResponseDTO(ketQua.getId(), diemSo, cauHoiList.size(),
+                soCauDung, soCauSai, soCauChuaTraLoi, Math.max(0, request.getThoiGianLam()), review);
+        baiLamAdminService.luu(ketQua, fullReview);
 
         return new NopBaiResponseDTO(
                 ketQua.getId(),

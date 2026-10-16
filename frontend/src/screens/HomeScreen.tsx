@@ -1,8 +1,14 @@
-import { useState, useEffect } from 'react';
-import type { Topic } from '../data';
-import { layNhomMon, type NhomMon } from '../services/api';
-import type { AuthUser } from '../services/api';
-import StudyChatWidget from '../components/StudyChatWidget';
+import { useEffect, useState } from "react";
+import type { Topic } from "../data";
+import {
+  layNhomMon,
+  layDanhSachChuDeThongKe,
+  type NhomMon,
+  type AuthUser,
+  type ChuDeThongKeDTO,
+} from "../services/api";
+import StudyChatWidget from "../components/StudyChatWidget";
+import "./HomeScreen.css";
 
 interface Props {
   topics: Topic[];
@@ -14,178 +20,551 @@ interface Props {
   onLogout: () => void;
   xp: number;
   streak: number;
+  onResults?: () => void;
 }
+const github = "https://github.com/BigBoss1208/quiz_app";
+const normalize = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .toLowerCase();
+const scrollTo = (id: string) =>
+  document
+    .getElementById(id)
+    ?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-// Danh mục được sinh động từ dữ liệu chủ đề (API)
-
-function ProgressRing({ pct }: { pct: number }) {
-  const r = 18, c = 2 * Math.PI * r;
-  const offset = c - (pct / 100) * c;
-  return (
-    <svg width="44" height="44" viewBox="0 0 44 44">
-      <circle cx="22" cy="22" r={r} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
-      <circle cx="22" cy="22" r={r} fill="none" stroke="white" strokeWidth="3"
-        strokeDasharray={c} strokeDashoffset={offset}
-        strokeLinecap="round" transform="rotate(-90 22 22)" />
-      <text x="22" y="26" textAnchor="middle" fill="white" fontSize="9" fontWeight="800" fontFamily="Nunito">
-        {pct}%
-      </text>
-    </svg>
-  );
-}
-
-function TopicCard({ topic, onStart }: { topic: Topic; onStart: () => void }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <div
-      className="card-hover relative rounded-[20px] overflow-hidden cursor-pointer select-none"
-      style={{
-        background: topic.gradient,
-        boxShadow: `0 8px 32px ${topic.shadow}, 0 2px 8px rgba(0,0,0,0.2)`,
-        minHeight: 200,
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onTouchStart={() => setHovered(true)}
-      onTouchEnd={() => setHovered(false)}
-      onClick={onStart}
-    >
-      <div className="absolute inset-0 opacity-10 pointer-events-none"
-        style={{ background: 'radial-gradient(circle at 70% 30%, white, transparent 60%)' }} />
-      <div className="p-5 flex flex-col h-full min-h-[200px]">
-        <div className="flex items-start justify-between mb-3">
-          <span className="text-5xl animate-float">
-            {topic.emoji}
-          </span>
-          <div style={{ opacity: hovered ? 0 : 1, transition: 'opacity 0.2s' }}>
-            <ProgressRing pct={topic.completion} />
-          </div>
-        </div>
-        <div className="mt-auto">
-          <h3 className="text-white font-extrabold text-lg leading-tight" style={{ fontFamily: 'Baloo 2' }}>
-            {topic.name}
-          </h3>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-white/70 text-xs font-semibold">{topic.questions} câu hỏi</span>
-            <span className="w-1 h-1 rounded-full bg-white/40" />
-            <span className="text-white/70 text-xs font-semibold">{topic.category}</span>
-          </div>
-        </div>
-        <div className="absolute inset-x-4 bottom-4 transition-all duration-200"
-          style={{ opacity: hovered ? 1 : 0, transform: hovered ? 'translateY(0)' : 'translateY(8px)' }}>
-          <button
-            className="btn-bounce w-full py-2.5 rounded-2xl bg-white font-extrabold text-sm"
-            style={{ color: '#4834D4', fontFamily: 'Baloo 2' }}
-            onClick={(e) => { e.stopPropagation(); onStart(); }}
-          >
-            🚀 Bắt đầu
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function HomeScreen({ topics, currentUser, onStart, onLeaderboard, onAdmin, onLogin, onLogout, xp, streak }: Props) {
-  const [activeCategory, setActiveCategory] = useState('Tất cả');
+export default function HomeScreen({
+  topics,
+  currentUser,
+  onStart,
+  onLeaderboard,
+  onAdmin,
+  onLogin,
+  onLogout,
+  xp,
+  streak,
+  onResults,
+}: Props) {
+  const [category, setCategory] = useState("Tất cả");
+  const [search, setSearch] = useState("");
   const [groups, setGroups] = useState<NhomMon[]>([]);
-  const [groupError, setGroupError] = useState('');
-  useEffect(() => { layNhomMon().then(setGroups).catch(e => setGroupError(e.message)); }, [topics]);
-  const dynamicCategories = ['Tất cả', ...groups.map(g => g.ten)];
-  const filtered = activeCategory === 'Tất cả' ? topics : topics.filter(t => t.category === activeCategory);
-
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
+  const [raw, setRaw] = useState<ChuDeThongKeDTO[] | null>(null);
+  const [error, setError] = useState("");
+  const [accountOpen, setAccountOpen] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    Promise.allSettled([layNhomMon(), layDanhSachChuDeThongKe()]).then(
+      ([g, s]) => {
+        if (!alive) return;
+        if (g.status === "fulfilled") {
+          setGroups(g.value);
+          setGroupsLoaded(true);
+        } else
+          setError(
+            "Chưa tải được nhóm môn. Bạn vẫn có thể tìm theo tên chủ đề.",
+          );
+        if (s.status === "fulfilled") setRaw(s.value);
+      },
+    );
+    return () => {
+      alive = false;
+    };
+  }, [topics]);
+  const filtered = topics.filter(
+    (t) =>
+      (category === "Tất cả" || t.category === category) &&
+      normalize(`${t.name} ${t.category}`).includes(normalize(search)),
+  );
+  const highlights = (raw || [])
+    .flatMap((t) =>
+      (t.topDiemCao || []).map((p) => ({ ...p, topic: t.tenChuDe })),
+    )
+    .sort((a, b) => b.diemSo - a.diemSo)
+    .slice(0, 5);
+  const featureAction = currentUser?.vaiTro === "ADMIN" ? onAdmin : undefined;
   return (
-    <>
-    {groupError && <p role="alert">Không tải được nhóm môn: {groupError}</p>}
-    <div className="min-h-screen" style={{ background: 'linear-gradient(160deg, #0f0c29 0%, #1a1048 50%, #24243e 100%)' }}>
-      <div className="fixed top-0 left-0 w-96 h-96 rounded-full opacity-20 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #6C5CE7, transparent)', filter: 'blur(60px)', transform: 'translate(-30%, -30%)' }} />
-      <div className="fixed top-20 right-0 w-80 h-80 rounded-full opacity-15 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #FF6B6B, transparent)', filter: 'blur(50px)', transform: 'translateX(30%)' }} />
-      <div className="fixed bottom-0 left-1/2 w-96 h-96 rounded-full opacity-10 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #00D9A5, transparent)', filter: 'blur(80px)', transform: 'translateX(-50%)' }} />
-
-      <div className="relative z-10 max-w-5xl mx-auto px-4 pb-12">
-        <header className="flex items-center justify-between py-5">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🎮</span>
-            <span className="text-white font-extrabold text-xl" style={{ fontFamily: 'Baloo 2' }}>Quiz <span style={{ color: '#a78bfa' }}>ManhNhom</span></span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={onLeaderboard}
-              className="btn-bounce flex items-center gap-1.5 px-3 py-2 rounded-2xl text-white/80 font-bold text-sm"
-              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
-              🏆 <span className="hidden sm:inline">Bảng xếp hạng</span>
+    <div className="home-page">
+      <header className="home-header">
+        <div className="home-header-inner">
+          <a
+            className="home-brand"
+            href="#home-top"
+            aria-label="Quiz ManhNhom – Trang chủ"
+          >
+            <span aria-hidden="true">🎓</span>Quiz <b>ManhNhom</b>
+          </a>
+          <nav className="home-nav" aria-label="Menu chính">
+            <a className="active" href="#home-top">
+              Trang chủ
+            </a>
+            <a href="#home-discover">Khám phá đề thi</a>
+            <button
+              onClick={featureAction}
+              disabled={!featureAction}
+              title={
+                featureAction
+                  ? "Mở quản trị câu hỏi"
+                  : "Tính năng USER tạo câu hỏi đang được chuẩn bị"
+              }
+            >
+              Tạo câu hỏi
             </button>
-            <button onClick={onAdmin} aria-label="Quản trị"
-              className="btn-bounce flex items-center gap-1.5 px-3 py-2 rounded-2xl text-white/60 font-bold text-sm"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              ⚙️
+            <button
+              disabled
+              title="Tính năng đề thi của USER đang được chuẩn bị"
+            >
+              Đề thi của tôi
             </button>
-            {currentUser ? (
-              <button onClick={onLogout}
-                className="btn-bounce flex items-center gap-1.5 px-3 py-2 rounded-2xl text-white/80 font-bold text-sm"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}>
-                👤 <span className="hidden sm:inline">{currentUser.hoTen}</span>
+            <button
+              onClick={onResults}
+              disabled={!onResults}
+              title="Kết quả lượt làm bài vừa hoàn thành"
+            >
+              Kết quả
+            </button>
+          </nav>
+          <div className="home-account-actions">
+            <button
+              className="home-rank-button"
+              onClick={onLeaderboard}
+              aria-label="Bảng xếp hạng"
+            >
+              🏆 <span>Bảng xếp hạng</span>
+            </button>
+            {currentUser?.vaiTro === "ADMIN" && (
+              <button onClick={onAdmin} aria-label="Quản trị" title="Quản trị">
+                ⚙
               </button>
+            )}
+            <span className="home-xp" title="XP nhận được trong phiên này">
+              ⚡ {xp.toLocaleString("vi-VN")} XP
+            </span>
+            <span
+              className="home-streak"
+              title="Số lượt hoàn thành trong phiên này"
+            >
+              🔥 {streak}
+            </span>
+            {currentUser ? (
+              <div className="home-account">
+                <button
+                  aria-label="Tài khoản"
+                  aria-expanded={accountOpen}
+                  onClick={() => setAccountOpen(!accountOpen)}
+                  className="home-avatar"
+                >
+                  {currentUser.hoTen?.trim().charAt(0) || "U"}
+                </button>
+                {accountOpen && (
+                  <div className="home-account-menu">
+                    <strong>{currentUser.hoTen}</strong>
+                    <small>@{currentUser.username}</small>
+                    <button onClick={onLogout}>Đăng xuất</button>
+                  </div>
+                )}
+              </div>
             ) : (
-              <button onClick={onLogin}
-                className="btn-bounce flex items-center gap-1.5 px-3 py-2 rounded-2xl font-bold text-sm text-white"
-                style={{ background: 'linear-gradient(90deg, #6C5CE7, #4834D4)' }}>
+              <button className="home-login" onClick={onLogin}>
                 Đăng nhập
               </button>
             )}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-2xl"
-              style={{ background: 'rgba(255,193,7,0.15)', border: '1px solid rgba(255,193,7,0.3)' }}>
-              <span className="text-lg">🔥</span>
-              <span className="text-yellow-300 font-extrabold text-sm">{streak}</span>
+          </div>
+        </div>
+      </header>
+      <main className="home-container" id="home-top">
+        <section className="home-hero" aria-labelledby="home-heading">
+          <div className="home-hero-copy">
+            <span className="home-eyebrow">HỌC MÀ CHƠI · CHƠI MÀ HỌC</span>
+            <h1 id="home-heading">
+              Học thông minh
+              <br />
+              cùng <span>Quiz ManhNhom</span>
+            </h1>
+            <p>
+              Ôn tập kiến thức, thử sức với các câu hỏi và chinh phục những thử
+              thách mới mỗi ngày.
+            </p>
+            <div className="home-hero-actions">
+              <a className="home-primary" href="#home-discover">
+                Khám phá đề thi <span>→</span>
+              </a>
+              {featureAction ? (
+                <button className="home-outline" onClick={onAdmin}>
+                  Quản lý câu hỏi
+                </button>
+              ) : (
+                <a className="home-outline" href="#home-features">
+                  Tìm hiểu tính năng
+                </a>
+              )}
             </div>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-2xl"
-              style={{ background: 'rgba(108,92,231,0.2)', border: '1px solid rgba(108,92,231,0.4)' }}>
-              <span className="text-lg">⚡</span>
-              <span className="text-purple-300 font-extrabold text-sm">{xp.toLocaleString()} XP</span>
+            <div className="home-benefits">
+              <div>
+                <i>▤</i>
+                <span>
+                  Nhiều
+                  <br />
+                  chủ đề
+                </span>
+              </div>
+              <div>
+                <i>✧</i>
+                <span>
+                  Đa dạng
+                  <br />
+                  câu hỏi
+                </span>
+              </div>
+              <div>
+                <i>⚗</i>
+                <span>
+                  Học mọi lúc
+                  <br />
+                  mọi nơi
+                </span>
+              </div>
             </div>
           </div>
-        </header>
-
-        <div className="text-center py-8">
-          <h1 className="text-white font-black text-3xl sm:text-5xl leading-tight mb-3" style={{ fontFamily: 'Baloo 2', letterSpacing: '-0.5px' }}>
-            Chọn chủ đề của bạn 🎯
-          </h1>
-          <p className="text-white/50 text-base sm:text-lg font-semibold max-w-md mx-auto">
-            Học mà chơi, chơi mà học — nâng cấp bản thân mỗi ngày!
-          </p>
-        </div>
-
-        <div className="flex gap-2.5 overflow-x-auto pb-2 mb-6" style={{ scrollbarWidth: 'none' }}>
-          {dynamicCategories.map(cat => (
-            <button key={cat} onClick={() => setActiveCategory(cat)}
-              className="btn-bounce flex-shrink-0 px-4 py-2 rounded-full font-extrabold text-sm transition-all duration-200"
-              style={{
-                background: activeCategory === cat ? 'linear-gradient(90deg, #6C5CE7, #4834D4)' : 'rgba(255,255,255,0.08)',
-                color: activeCategory === cat ? 'white' : 'rgba(255,255,255,0.6)',
-                border: activeCategory === cat ? 'none' : '1px solid rgba(255,255,255,0.12)',
-                boxShadow: activeCategory === cat ? '0 4px 15px rgba(108,92,231,0.4)' : 'none',
-              }}>
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {filtered.length === 0 ? (
-          <p className="text-white/50 text-center font-semibold py-12">
-            Chưa có chủ đề nào. Vào ⚙️ Admin để thêm chủ đề mới.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {filtered.map(topic => (
-              <TopicCard key={topic.id} topic={topic} onStart={() => onStart(topic)} />
+          <div className="home-hero-art">
+            <img
+              src="/images/study-hero.webp"
+              width="1536"
+              height="1024"
+              alt="Bạn trẻ học bài với máy tính, sách và bảng kiểm kiến thức"
+              fetchPriority="high"
+            />
+          </div>
+        </section>
+        <section className="home-search-section" aria-label="Công cụ tìm kiếm">
+          <form
+            className="home-search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              scrollTo("home-discover");
+            }}
+          >
+            <span aria-hidden="true">⌕</span>
+            <input
+              aria-label="Tìm kiếm đề thi"
+              placeholder="Tìm kiếm theo tên, môn học, chủ đề…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <button type="submit">Tìm kiếm</button>
+          </form>
+          <div className="home-quick">
+            <b>Gợi ý nhanh:</b>
+            {topics.slice(0, 8).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setSearch(t.name);
+                  setCategory("Tất cả");
+                  scrollTo("home-discover");
+                }}
+              >
+                {t.name}
+              </button>
             ))}
           </div>
-        )}
-      </div>
+        </section>
+        <section id="home-discover" className="home-section">
+          <div className="home-section-heading">
+            <h2>🎓 Chủ đề nổi bật</h2>
+            <button
+              onClick={() => {
+                setCategory("Tất cả");
+                setSearch("");
+              }}
+            >
+              Xem tất cả →
+            </button>
+          </div>
+          {error && (
+            <p role="alert" className="home-notice">
+              {error}
+            </p>
+          )}
+          <div className="home-categories" aria-label="Lọc nhóm môn">
+            {["Tất cả", ...groups.map((g) => g.ten)].map((g) => (
+              <button
+                key={g}
+                aria-pressed={category === g}
+                onClick={() => setCategory(g)}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+          <div className="home-topic-grid">
+            {filtered.map((t, i) => (
+              <div
+                className={`home-topic-card home-tone-${i % 6}`}
+                key={t.id}
+                tabIndex={0}
+                onClick={() => onStart(t)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onStart(t);
+                  }
+                }}
+                aria-label={`Làm bài ${t.name}`}
+              >
+                <span className="home-topic-icon" aria-hidden="true">
+                  {t.emoji}
+                </span>
+                <h3>{t.name}</h3>
+                <p>{t.questions} câu hỏi</p>
+                <small>{t.category}</small>
+                <span className="home-topic-arrow" aria-hidden="true">
+                  ↗
+                </span>
+              </div>
+            ))}
+          </div>
+          {!filtered.length && (
+            <p className="home-empty" role="status">
+              Không có chủ đề phù hợp. Hãy thử từ khóa hoặc nhóm môn khác.
+            </p>
+          )}
+        </section>
+        <section className="home-section">
+          <div className="home-section-heading">
+            <h2>🔥 Khám phá đề thi</h2>
+            <a href="#home-discover">Xem tất cả →</a>
+          </div>
+          <div className="home-exam-grid">
+            {topics.slice(0, 3).map((t, i) => (
+              <article className="home-exam-card" key={t.id}>
+                <div className="home-exam-heading">
+                  <span className={`home-exam-icon home-tone-${i}`}>
+                    {t.emoji}
+                  </span>
+                  <div>
+                    <p className="home-exam-title">{t.name}</p>
+                    <small>{t.category}</small>
+                  </div>
+                </div>
+                <p>
+                  ▤ {t.questions} câu hỏi ·{" "}
+                  {t.choPhepXemDapAn
+                    ? "Có chế độ luyện tập"
+                    : "Ôn tập và kiểm tra kiến thức"}
+                </p>
+                <button className="home-primary" onClick={() => onStart(t)}>
+                  Làm ngay →
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+        <section id="home-features" className="home-section">
+          <div className="home-section-heading">
+            <h2>✦ Tính năng nổi bật</h2>
+          </div>
+          <div className="home-feature-grid">
+            {[
+              {
+                icon: "▤",
+                name: "Làm bài trắc nghiệm",
+                description:
+                  "Thử sức với các câu hỏi được chấm điểm trên hệ thống.",
+                action: () => scrollTo("home-discover"),
+                color: 0,
+              },
+              {
+                icon: "✎",
+                name: "Tạo câu hỏi",
+                description: featureAction
+                  ? "Tạo và quản lý câu hỏi trong trang Admin."
+                  : "Không gian tạo câu hỏi cho USER đang được chuẩn bị.",
+                action: featureAction,
+                color: 1,
+              },
+              {
+                icon: "▱",
+                name: "Tạo đề thi",
+                description: featureAction
+                  ? "Cấu hình chủ đề và đề thi tại trang quản trị."
+                  : "Tính năng tạo đề thi riêng cho USER đang được chuẩn bị.",
+                action: featureAction,
+                color: 3,
+              },
+              {
+                icon: "↗",
+                name: "Chia sẻ kiến thức",
+                description: "Cùng khám phá, luyện tập và học hỏi mỗi ngày.",
+                action: () => scrollTo("home-discover"),
+                color: 4,
+              },
+            ].map((f) => (
+              <button
+                className={`home-feature-card home-tone-${f.color}`}
+                key={f.name}
+                disabled={!f.action}
+                onClick={f.action}
+              >
+                <i>{f.icon}</i>
+                <h3>{f.name}</h3>
+                <p>{f.description}</p>
+                <span>{f.action ? "Khám phá →" : "Đang chuẩn bị"}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+        <section className="home-banner">
+          <div>
+            <h2>Chia sẻ kiến thức – Lan tỏa giá trị</h2>
+            <p>Khám phá các chủ đề, luyện tập đều đặn và tiến bộ mỗi ngày.</p>
+            <a className="home-primary" href="#home-discover">
+              Bắt đầu học ngay →
+            </a>
+          </div>
+          <div className="home-banner-art" aria-hidden="true">
+            <span>🎓</span>
+            <span>📚</span>
+            <span>🏆</span>
+          </div>
+        </section>
+        <section className="home-section" id="home-scores">
+          <div className="home-section-heading">
+            <h2>🏆 Điểm nổi bật theo chủ đề</h2>
+            <button onClick={onLeaderboard}>Bảng xếp hạng →</button>
+          </div>
+          <p className="home-section-note">
+            Các điểm cao được Backend trả về theo từng chủ đề.
+          </p>
+          <div className="home-score-list">
+            {highlights.map((p, i) => (
+              <div
+                className="home-score-row"
+                key={`${p.topic}-${p.tenNguoiChoi}-${i}`}
+              >
+                <b className="home-rank-number">{i + 1}</b>
+                <span className="home-score-avatar">
+                  {p.tenNguoiChoi.charAt(0).toUpperCase()}
+                </span>
+                <strong>{p.tenNguoiChoi}</strong>
+                <small>{p.topic}</small>
+                <b className="home-score-points">
+                  {p.diemSo.toLocaleString("vi-VN")} điểm
+                </b>
+              </div>
+            ))}
+            {!highlights.length && (
+              <p className="home-empty">
+                {raw
+                  ? "Chưa có kết quả để hiển thị."
+                  : "Chưa tải được dữ liệu điểm."}
+              </p>
+            )}
+          </div>
+        </section>
+        <section className="home-section">
+          <div className="home-section-heading">
+            <h2>▥ Thống kê nhanh</h2>
+          </div>
+          <div className="home-stat-grid">
+            {[
+              { icon: "▤", label: "Chủ đề hiện có", value: topics.length },
+              {
+                icon: "✎",
+                label: "Câu hỏi",
+                value: topics.reduce((n, t) => n + t.questions, 0),
+              },
+              {
+                icon: "✓",
+                label: "Lượt làm bài",
+                value: raw ? raw.reduce((n, t) => n + t.luotChoi, 0) : null,
+              },
+              {
+                icon: "✦",
+                label: "Nhóm môn",
+                value: groupsLoaded ? groups.length : null,
+              },
+            ].map((s, i) => (
+              <div className={`home-stat home-tone-${i}`} key={s.label}>
+                <i>{s.icon}</i>
+                <div>
+                  <span>{s.label}</span>
+                  <strong>
+                    {s.value == null ? "—" : s.value.toLocaleString("vi-VN")}
+                  </strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+      <footer className="home-footer">
+        <div className="home-container home-footer-grid">
+          <section>
+            <a className="home-brand" href="#home-top">
+              <span>🎓</span>Quiz <b>ManhNhom</b>
+            </a>
+            <p>
+              Nền tảng ôn luyện kiến thức trực tuyến, đồng hành cùng bạn trên
+              hành trình học tập và chinh phục tri thức.
+            </p>
+            <div className="home-social">
+              <button
+                disabled
+                title="Chưa có liên kết Facebook được xác minh"
+                aria-label="Facebook – chưa cập nhật"
+              >
+                f
+              </button>
+              <a
+                href={github}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GitHub Quiz ManhNhom"
+              >
+                GH
+              </a>
+              <a
+                href="mailto:quangmanh12082005@gmail.com"
+                aria-label="Gửi email"
+              >
+                ✉
+              </a>
+            </div>
+          </section>
+          <section>
+            <h2>Thông tin liên hệ</h2>
+            <a href="tel:0962022716">☏ 0962022716</a>
+            <a href="mailto:quangmanh12082005@gmail.com">
+              ✉ quangmanh12082005@gmail.com
+            </a>
+            <p>♧ Thái Nguyên, Việt Nam</p>
+          </section>
+          <section>
+            <h2>Người phát triển</h2>
+            <strong>Ngô Quang Mạnh</strong>
+            <p>
+              Sinh viên CNTT – ICTU
+              <br />
+              Phát triển và xây dựng Quiz ManhNhom.
+            </p>
+            <div className="home-social">
+              <button disabled title="Chưa có liên kết Facebook được xác minh">
+                Facebook
+              </button>
+              <a href={github} target="_blank" rel="noopener noreferrer">
+                GitHub
+              </a>
+              <a href="mailto:quangmanh12082005@gmail.com">Liên hệ</a>
+            </div>
+          </section>
+        </div>
+        <div className="home-footer-bottom home-container">
+          © {new Date().getFullYear()} Quiz ManhNhom. Học mà chơi, chơi mà học.
+        </div>
+      </footer>
+      <StudyChatWidget />
     </div>
-    <StudyChatWidget />
-    </>
   );
 }

@@ -12,6 +12,8 @@ reset client/*.http
 backend/.env*
 *.log
 backend/qa-results/
+*.dump
+*.backup
 
 # Backend
 backend/target

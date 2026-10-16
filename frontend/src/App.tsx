@@ -153,6 +153,7 @@ export default function App() {
     try { sessionStorage.removeItem(activeTopicKey); } catch {}
     xoaAuth();
     setCurrentUser(null);
+    setLastResult(null);
     setCelebrate(false);
     setScreen('home');
   };
@@ -208,6 +209,7 @@ export default function App() {
           onLogout={handleLogout}
           xp={xp}
           streak={streak}
+          onResults={lastResult && selectedTopic ? () => setScreen('result') : undefined}
         />
       )}
 

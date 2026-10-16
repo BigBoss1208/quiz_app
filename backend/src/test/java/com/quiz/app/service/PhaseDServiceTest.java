@@ -19,7 +19,7 @@ class PhaseDServiceTest {
     ChuDeRepository topics=mock(ChuDeRepository.class);
     KetQuaRepository results=mock(KetQuaRepository.class);
     CauHoiService crud=new CauHoiService(questions,topics);
-    QuizPlayService play=new QuizPlayService(topics,questions,mock(DapAnRepository.class),results);
+    QuizPlayService play=new QuizPlayService(topics,questions,mock(DapAnRepository.class),results,mock(BaiLamAdminService.class));
     QuestionImportService imports=new QuestionImportService(new ExcelCauHoiService());
     ChuDe topic() { ChuDe t=new ChuDe();t.setId(1L);when(topics.findById(1L)).thenReturn(Optional.of(t)); return t; }
     CauHoi question(CauHoi.LoaiCauHoi type) {

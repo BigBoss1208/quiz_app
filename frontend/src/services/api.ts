@@ -463,3 +463,9 @@ export const guiTinNhanChat = async (
   });
   return data;
 };
+
+export interface BaiLamAdminDTO {
+  ketQuaId: number; userId: number | null; tenNguoiChoi: string; username: string | null; hoTen: string | null;
+  tenChuDe: string; thoiGianNop: string; diemSo: number; coChiTiet: boolean; baiLam: NopBaiResponseDTO | null;
+}
+export const xemBaiLamAdmin = (id: number) => request<BaiLamAdminDTO>(`/admin/ketqua/${id}/bai-lam`);

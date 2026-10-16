@@ -18,6 +18,12 @@ public class AdminController {
 
     private final NguoiDungAdminService nguoiDungAdminService;
     private final ThongKeService thongKeService;
+    private final com.quiz.app.service.BaiLamAdminService baiLamAdminService;
+
+    @GetMapping("/ketqua/{id}/bai-lam")
+    public com.quiz.app.dto.BaiLamAdminDTO xemBaiLam(@PathVariable Long id) {
+        return baiLamAdminService.xem(id);
+    }
 
     @GetMapping("/nguoidung")
     public ResponseEntity<List<NguoiDungAdminDTO.DanhSach>> layDanhSachNguoiDung() {

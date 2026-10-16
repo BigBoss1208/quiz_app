@@ -31,7 +31,7 @@ class QuizPlayServiceTest {
     private final DapAnRepository dapAnRepository = mock(DapAnRepository.class);
     private final KetQuaRepository ketQuaRepository = mock(KetQuaRepository.class);
     private final QuizPlayService service = new QuizPlayService(
-            chuDeRepository, cauHoiRepository, dapAnRepository, ketQuaRepository);
+            chuDeRepository, cauHoiRepository, dapAnRepository, ketQuaRepository, mock(BaiLamAdminService.class));
 
     @Test
     void nopBaiGradesAllQuestionsAndReturnsReviewOnlyAfterSubmission() {

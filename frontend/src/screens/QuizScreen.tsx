@@ -460,11 +460,16 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
                     )}
                   </div>
 
-                  {isCurrentFlagged && (
-                    <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold text-amber-300 bg-amber-500/15 border border-amber-500/30">
-                      🚩 Đang đánh dấu
-                    </span>
-                  )}
+              <button
+                type="button"
+                onClick={toggleFlag}
+                className={`quiz-nav-button quiz-nav-flag${isCurrentFlagged ? ' is-active' : ''}`}
+                title="Đánh dấu câu này để xem lại sau"
+              >
+                <span aria-hidden="true">♧</span>
+                <span>{isCurrentFlagged ? 'Đã đánh dấu' : 'Đánh dấu câu này'}</span>
+              </button>
+
                 </div>
 
                 {question.image && <img src={question.image} alt="" className="quiz-question-image" />}
@@ -624,16 +629,6 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
 
               <button
                 type="button"
-                onClick={toggleFlag}
-                className={`quiz-nav-button quiz-nav-flag${isCurrentFlagged ? ' is-active' : ''}`}
-                title="Đánh dấu câu này để xem lại sau"
-              >
-                <span>🚩</span>
-                <span>{isCurrentFlagged ? 'Đã đánh dấu' : 'Xem lại sau'}</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => goToQuestion(current + 1)}
                 disabled={current === questions.length - 1}
                 className="quiz-nav-button quiz-nav-secondary"
@@ -645,7 +640,7 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
               <button
                 type="button"
                 onClick={() => setShowConfirmSubmit(true)}
-                className="quiz-nav-button quiz-submit"
+                className="quiz-nav-button quiz-submit quiz-submit-inline"
               >
                 <span>Nộp bài</span>
                 <span aria-hidden="true">↗</span>
@@ -714,6 +709,8 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
               <span><i className="is-current" /> Đang chọn</span>
               <span><i className="is-flagged" /> Đánh dấu</span>
             </div>
+            <div className="quiz-summary"><h3>Tóm tắt bài làm</h3><p><span>Đã trả lời</span><strong>{answeredCount}</strong></p><p><span>Chưa trả lời</span><strong>{unansweredCount}</strong></p><p><span>Đã đánh dấu</span><strong>{questions.filter(q => flagged[q.backendId]).length}</strong></p><p className="quiz-summary-total"><span>Tổng số câu</span><strong>{questions.length}</strong></p></div>
+            <button className="quiz-nav-button quiz-submit quiz-submit-sidebar" onClick={() => setShowConfirmSubmit(true)} disabled={isSubmitting}>↗ Nộp bài ngay</button>
           </aside>
         </div>
       </div>
