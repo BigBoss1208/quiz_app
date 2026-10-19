@@ -81,8 +81,8 @@ public class QuestionImportService {
         q.setLoaiCauHoi(CauHoi.LoaiCauHoi.valueOf(c[0] == null ? "" : c[0].trim())); q.setNoiDungCauHoi(c[1]); q.setGiaiThich(c[7]);
         List<DapAn> answers=new ArrayList<>();
         if(q.getLoaiCauHoi()==CauHoi.LoaiCauHoi.TRAC_NGHIEM) {
-            String correct=c[6]==null?"":c[6].trim().toUpperCase(Locale.ROOT);
-            for(int i=0;i<4;i++) { DapAn a=new DapAn(); a.setNoiDung(c[i+2]); a.setLaDapAnDung(correct.equals(String.valueOf((char)('A'+i)))); answers.add(a); }
+            Set<String> correct=QuestionValidator.parseCorrectLetters(c[6]);
+            for(int i=0;i<4;i++) { DapAn a=new DapAn(); a.setNoiDung(c[i+2]); a.setLaDapAnDung(correct.contains(String.valueOf((char)('A'+i)))); answers.add(a); }
         } else {
             for(String token:(c[6]==null?"":c[6]).split("\\|",-1)) { DapAn a=new DapAn(); a.setNoiDung(token.trim()); a.setLaDapAnDung(q.getLoaiCauHoi()==CauHoi.LoaiCauHoi.DIEN_TU); a.setThuTu(answers.size()); answers.add(a); }
         }
@@ -90,9 +90,9 @@ public class QuestionImportService {
     }
     public byte[] template(String format, String type) throws IOException {
         CauHoi.LoaiCauHoi.valueOf(type);
-        String question=type.equals("TRAC_NGHIEM")?"Thủ đô Việt Nam?":type.equals("DIEN_TU")?"中国 nghĩa là gì?":"Sắp xếp câu tiếng Trung";
-        String answer=type.equals("TRAC_NGHIEM")?"A":type.equals("DIEN_TU")?"Trung Quốc|中国":"我|学习|中文";
-        String[] cells={type,question,"Hà Nội","Huế","Đà Nẵng","Hải Phòng",answer,"Ví dụ Unicode tiếng Việt và chữ Hán"};
+        String question=type.equals("TRAC_NGHIEM")?"Chọn tất cả thành phố thuộc Việt Nam":type.equals("DIEN_TU")?"中国 nghĩa là gì?":"Sắp xếp câu tiếng Trung";
+        String answer=type.equals("TRAC_NGHIEM")?"A,C":type.equals("DIEN_TU")?"Trung Quốc|中国":"我|学习|中文";
+        String[] cells={type,question,"Hà Nội","Bắc Kinh","Huế","Tokyo",answer,"Ví dụ Unicode tiếng Việt và chữ Hán. Nhiều đáp án đúng ngăn cách bằng dấu phẩy: A,C."};
         try(ByteArrayOutputStream out=new ByteArrayOutputStream()) {
             if(format.equals("xlsx")) {
                 try(Workbook workbook=new XSSFWorkbook()) { Sheet sheet=workbook.createSheet("Questions"); String[] keys={"TYPE","QUESTION","A","B","C","D","ANSWER","EXPLANATION"}; Row header=sheet.createRow(0),row=sheet.createRow(1); for(int i=0;i<8;i++){header.createCell(i).setCellValue(keys[i]);row.createCell(i).setCellValue(cells[i]);sheet.setColumnWidth(i,6000);} workbook.write(out); }

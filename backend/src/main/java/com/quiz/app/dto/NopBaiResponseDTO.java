@@ -34,6 +34,8 @@ public class NopBaiResponseDTO {
         // TRAC_NGHIEM
         private Long dapAnDaChonId;
         private Long dapAnDungId;
+        private List<Long> dapAnDaChonIds;
+        private List<Long> dapAnDungIds;
         // DIEN_TU & SAP_XEP
         private String cauTraLoiText;
         private String dapAnDungText;

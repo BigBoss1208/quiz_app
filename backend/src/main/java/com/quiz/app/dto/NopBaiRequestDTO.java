@@ -28,6 +28,7 @@ public class NopBaiRequestDTO {
         private Long cauHoiId;
         // Dành cho TRAC_NGHIEM
         private Long dapAnId;
+        private List<Long> dapAnIds;
         // Dành cho DIEN_TU
         private String cauTraLoiText;
         // Dành cho SAP_XEP: danh sách ID của token theo thứ tự người chơi sắp xếp

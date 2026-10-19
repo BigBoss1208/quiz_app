@@ -99,11 +99,11 @@ export default function AiQuestionGenerator({
         !q.dapAnA.trim() ||
         !q.dapAnB.trim() ||
         !q.dapAnC.trim() ||
-        !q.dapAnD.trim()
+        !q.dapAnD.trim() || !/^[A-D](?:,[A-D])*$/.test(q.dapAnDung) || new Set(q.dapAnDung.split(',')).size !== q.dapAnDung.split(',').length
     );
 
     if (hasEmptyField) {
-      setErrorMessage('Có câu hỏi hoặc đáp án đang bị để trống trong bảng. Vui lòng kiểm tra lại trước khi lưu.');
+      setErrorMessage('Kiểm tra nội dung câu hỏi, đủ 4 lựa chọn và ít nhất một đáp án đúng trước khi lưu.');
       return;
     }
 
@@ -292,7 +292,7 @@ export default function AiQuestionGenerator({
                         value={item.dapAnA}
                         onChange={(e) => handleUpdateItem(index, 'dapAnA', e.target.value)}
                         className={`w-full p-1.5 border rounded-lg text-xs focus:outline-none ${
-                          item.dapAnDung === 'A'
+                          item.dapAnDung.split(/[,;|]\s*/).includes('A')
                             ? 'border-emerald-400 bg-emerald-50/50 text-emerald-800 font-bold'
                             : 'border-slate-200 bg-white'
                         }`}
@@ -307,7 +307,7 @@ export default function AiQuestionGenerator({
                         value={item.dapAnB}
                         onChange={(e) => handleUpdateItem(index, 'dapAnB', e.target.value)}
                         className={`w-full p-1.5 border rounded-lg text-xs focus:outline-none ${
-                          item.dapAnDung === 'B'
+                          item.dapAnDung.split(/[,;|]\s*/).includes('B')
                             ? 'border-emerald-400 bg-emerald-50/50 text-emerald-800 font-bold'
                             : 'border-slate-200 bg-white'
                         }`}
@@ -322,7 +322,7 @@ export default function AiQuestionGenerator({
                         value={item.dapAnC}
                         onChange={(e) => handleUpdateItem(index, 'dapAnC', e.target.value)}
                         className={`w-full p-1.5 border rounded-lg text-xs focus:outline-none ${
-                          item.dapAnDung === 'C'
+                          item.dapAnDung.split(/[,;|]\s*/).includes('C')
                             ? 'border-emerald-400 bg-emerald-50/50 text-emerald-800 font-bold'
                             : 'border-slate-200 bg-white'
                         }`}
@@ -337,7 +337,7 @@ export default function AiQuestionGenerator({
                         value={item.dapAnD}
                         onChange={(e) => handleUpdateItem(index, 'dapAnD', e.target.value)}
                         className={`w-full p-1.5 border rounded-lg text-xs focus:outline-none ${
-                          item.dapAnDung === 'D'
+                          item.dapAnDung.split(/[,;|]\s*/).includes('D')
                             ? 'border-emerald-400 bg-emerald-50/50 text-emerald-800 font-bold'
                             : 'border-slate-200 bg-white'
                         }`}
@@ -347,16 +347,16 @@ export default function AiQuestionGenerator({
 
                     {/* Dropdown chọn đáp án đúng */}
                     <td className="p-2.5 text-center">
-                      <select
-                        value={item.dapAnDung}
-                        onChange={(e) => handleUpdateItem(index, 'dapAnDung', e.target.value)}
-                        className="p-1.5 border border-slate-200 rounded-lg text-xs font-bold text-indigo-600 bg-indigo-50/40 focus:outline-none"
-                      >
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                      </select>
+                      <div className="flex gap-2 flex-wrap">
+                        {['A', 'B', 'C', 'D'].map(letter => <label key={letter}>
+                          <input type="checkbox" aria-label={`Câu ${index + 1} đáp án đúng ${letter}`}
+                            checked={item.dapAnDung.split(/[,;|]\s*/).includes(letter)}
+                            onChange={e => {
+                              const selected = item.dapAnDung.split(/[,;|]\s*/).filter(Boolean);
+                              handleUpdateItem(index, 'dapAnDung', (e.target.checked ? [...selected, letter] : selected.filter(v => v !== letter)).sort().join(','));
+                            }} /> {letter}
+                        </label>)}
+                      </div>
                     </td>
 
                     {/* Nút xóa câu hỏi khỏi preview */}

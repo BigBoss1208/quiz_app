@@ -71,19 +71,20 @@ function Editor({
           chữ Hán.
         </p>
       )}
+      {kind === "TRAC_NGHIEM" && <p>Đánh dấu tất cả đáp án đúng. Người làm bài phải chọn đủ và không chọn thừa.</p>}
       {q.danhSachDapAn.map((a, i) => (
         <div className="flex gap-2" key={i}>
           {kind === "TRAC_NGHIEM" && (
             <input
               aria-label={`Đáp án đúng ${i + 1}`}
-              type="radio"
+              type="checkbox"
               checked={a.laDapAnDung}
               onChange={() =>
                 change({
                   ...q,
                   danhSachDapAn: q.danhSachDapAn.map((v, n) => ({
                     ...v,
-                    laDapAnDung: i === n,
+                    laDapAnDung: i === n ? !v.laDapAnDung : v.laDapAnDung,
                   })),
                 })
               }
@@ -644,7 +645,7 @@ export default function PhaseDAdmin({
           <section className="admin-import">
             <h2>Import Excel / Word / PDF</h2>
             <p>
-              Tối đa 10 MB. PDF cần có lớp chữ; không dùng OCR. Word/PDF: KEY:
+              Trắc nghiệm nhiều đáp án: cột ANSWER nhập A,C (hoặc A;C). Tối đa 10 MB. PDF cần có lớp chữ; không dùng OCR. Word/PDF: KEY:
               nội dung, các câu cách nhau bằng dòng ---. Tải mẫu để biết định
               dạng.
             </p>

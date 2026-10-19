@@ -33,6 +33,7 @@ export function mapChuDeToTopic(dto: ChuDeThongKeDTO, index: number): Topic {
 // Question mở rộng để gửi lựa chọn lên server khi nộp bài.
 export interface QuestionWithIds extends Question {
   backendId: number;
+  nhieuDapAn?: boolean;
   answerIds: number[];
   loaiCauHoi?: 'TRAC_NGHIEM' | 'DIEN_TU' | 'SAP_XEP';
   rawTokens?: { id: number; noiDung: string }[];
@@ -42,6 +43,7 @@ export function mapCauHoiToQuestion(dto: CauHoiChoiDTO, index: number): Question
   return {
     id: index,
     backendId: dto.id,
+    nhieuDapAn: dto.nhieuDapAn ?? false,
     text: dto.noiDungCauHoi,
     image: dto.hinhAnh || undefined,
     loaiCauHoi: dto.loaiCauHoi || 'TRAC_NGHIEM',

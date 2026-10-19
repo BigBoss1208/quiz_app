@@ -114,31 +114,31 @@ public class CauHoiService {
             cauHoi.setChuDe(chuDe);
             cauHoi.setThuTu(++thuTuHienTai);
 
-            String dapAnDung = dto.getDapAnDung() != null ? dto.getDapAnDung().trim().toUpperCase() : "A";
+            java.util.Set<String> dapAnDung = QuestionValidator.parseCorrectLetters(dto.getDapAnDung());
 
             List<DapAn> danhSachDapAn = new ArrayList<>();
 
             DapAn daA = new DapAn();
             daA.setNoiDung(dto.getDapAnA() != null ? dto.getDapAnA().trim() : "");
-            daA.setLaDapAnDung("A".equals(dapAnDung));
+            daA.setLaDapAnDung(dapAnDung.contains("A"));
             daA.setCauHoi(cauHoi);
             danhSachDapAn.add(daA);
 
             DapAn daB = new DapAn();
             daB.setNoiDung(dto.getDapAnB() != null ? dto.getDapAnB().trim() : "");
-            daB.setLaDapAnDung("B".equals(dapAnDung));
+            daB.setLaDapAnDung(dapAnDung.contains("B"));
             daB.setCauHoi(cauHoi);
             danhSachDapAn.add(daB);
 
             DapAn daC = new DapAn();
             daC.setNoiDung(dto.getDapAnC() != null ? dto.getDapAnC().trim() : "");
-            daC.setLaDapAnDung("C".equals(dapAnDung));
+            daC.setLaDapAnDung(dapAnDung.contains("C"));
             daC.setCauHoi(cauHoi);
             danhSachDapAn.add(daC);
 
             DapAn daD = new DapAn();
             daD.setNoiDung(dto.getDapAnD() != null ? dto.getDapAnD().trim() : "");
-            daD.setLaDapAnDung("D".equals(dapAnDung));
+            daD.setLaDapAnDung(dapAnDung.contains("D"));
             daD.setCauHoi(cauHoi);
             danhSachDapAn.add(daD);
 

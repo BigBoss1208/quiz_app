@@ -124,7 +124,7 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
     if (item.loaiCauHoi === 'SAP_XEP') {
       return Boolean(ans.tokenIds && ans.tokenIds.length > 0);
     }
-    return ans.dapAnId !== undefined && ans.dapAnId !== null;
+    return (ans.dapAnIds?.length ?? 0) > 0 || (ans.dapAnId !== undefined && ans.dapAnId !== null);
   }, [answers]);
 
   const currentAnswer = question ? answers[question.backendId] : undefined;
@@ -164,14 +164,20 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
     setCurrent(nextIndex);
   };
 
-  // Trắc nghiệm: chọn một đáp án
+  // Câu cũ chọn một đáp án; câu nhiều đáp án bật/tắt từng lựa chọn.
   const selectChoiceAnswer = (answerId: number) => {
     if (!question || isSubmitting) return;
+    setPractice(prev => { const next = { ...prev }; delete next[question.backendId]; return next; });
     setAnswers((prev) => ({
       ...prev,
       [question.backendId]: {
         ...prev[question.backendId],
-        dapAnId: answerId,
+        ...(question.nhieuDapAn ? {
+          dapAnId: null,
+          dapAnIds: (prev[question.backendId]?.dapAnIds ?? (prev[question.backendId]?.dapAnId != null ? [prev[question.backendId].dapAnId!] : [])).includes(answerId)
+            ? (prev[question.backendId]?.dapAnIds ?? [prev[question.backendId].dapAnId!]).filter(id => id !== answerId)
+            : [...(prev[question.backendId]?.dapAnIds ?? (prev[question.backendId]?.dapAnId != null ? [prev[question.backendId].dapAnId!] : [])), answerId],
+        } : { dapAnId: answerId }),
       },
     }));
     setError(null);
@@ -275,7 +281,8 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
           const ans = answers[item.backendId];
           return {
             cauHoiId: item.backendId,
-            dapAnId: item.loaiCauHoi === 'TRAC_NGHIEM' || !item.loaiCauHoi ? ans?.dapAnId ?? null : null,
+            dapAnIds: item.nhieuDapAn ? ans?.dapAnIds ?? (ans?.dapAnId != null ? [ans.dapAnId] : []) : undefined,
+            dapAnId: !item.nhieuDapAn && (item.loaiCauHoi === 'TRAC_NGHIEM' || !item.loaiCauHoi) ? ans?.dapAnId ?? null : null,
             cauTraLoiText: item.loaiCauHoi === 'DIEN_TU' ? (ans?.textAnswer ?? '') : null,
             thuTuTokenIds: item.loaiCauHoi === 'SAP_XEP' ? (ans?.tokenIds ?? []) : null,
             thoiGianTraLoi: TIMER_SECONDS - (remainingByQuestion[item.backendId] ?? TIMER_SECONDS),
@@ -433,7 +440,7 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
             {topic.choPhepXemDapAn && question && <div className="quiz-error">
               <button disabled={practiceBusy || isSubmitting || !isCurrentAnswered} onClick={async () => {
                 setPracticeBusy(true);
-                try { const review = await xemDapAnLuyenTap(question.backendId, { cauHoiId: question.backendId, dapAnId: currentAnswer?.dapAnId, cauTraLoiText: currentAnswer?.textAnswer, thuTuTokenIds: currentAnswer?.tokenIds, thoiGianTraLoi: 0 }); setPractice(prev => ({ ...prev, [question.backendId]: review })); }
+                try { const review = await xemDapAnLuyenTap(question.backendId, { cauHoiId: question.backendId, dapAnId: currentAnswer?.dapAnId, dapAnIds: currentAnswer?.dapAnIds, cauTraLoiText: currentAnswer?.textAnswer, thuTuTokenIds: currentAnswer?.tokenIds, thoiGianTraLoi: 0 }); setPractice(prev => ({ ...prev, [question.backendId]: review })); }
                 catch (e) { setError(e instanceof Error ? e.message : 'Không xem được đáp án'); }
                 finally { setPracticeBusy(false); }
               }}>Xem đáp án luyện tập</button>
@@ -480,7 +487,7 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
                     ? 'Nhập câu trả lời của bạn vào ô bên dưới'
                     : question.loaiCauHoi === 'SAP_XEP'
                       ? 'Chạm vào các từ bên dưới để ghép thành câu hoàn chỉnh'
-                      : 'Chọn một đáp án phù hợp nhất'}
+                      : question.nhieuDapAn ? 'Chọn tất cả đáp án đúng (không chọn thừa)' : 'Chọn một đáp án phù hợp nhất'}
                 </p>
               </section>
 
@@ -594,7 +601,7 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
                 <section className="quiz-answers" aria-label="Các phương án trả lời">
                   {question.answers.map((answer, index) => {
                     const answerId = question.answerIds[index];
-                    const isSelected = answerId === (currentAnswer?.dapAnId ?? null);
+                    const isSelected = (currentAnswer?.dapAnIds ?? (currentAnswer?.dapAnId != null ? [currentAnswer.dapAnId] : [])).includes(answerId);
                     return (
                       <button
                         key={answerId}
@@ -605,7 +612,7 @@ export default function QuizScreen({ topic, currentUser, onFinish, onBack }: Pro
                       >
                         <span className="quiz-answer-letter">{answerLetter(index)}</span>
                         <span className="quiz-answer-text">{answer}</span>
-                        <span className="quiz-answer-radio" aria-hidden="true">
+                        <span className="quiz-answer-radio" style={question.nhieuDapAn ? { borderRadius: 6 } : undefined} aria-hidden="true">
                           {isSelected ? '✓' : ''}
                         </span>
                       </button>

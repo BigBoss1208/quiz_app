@@ -159,6 +159,7 @@ export interface CauHoiChoiDTO {
   noiDungCauHoi: string;
   hinhAnh: string | null;
   loaiCauHoi?: 'TRAC_NGHIEM' | 'DIEN_TU' | 'SAP_XEP';
+  nhieuDapAn?: boolean;
   danhSachDapAn: DapAnChoiDTO[];
 }
 
@@ -171,6 +172,7 @@ export interface TraLoiResponseDTO {
 export interface CauTraLoiNopBaiDTO {
   cauHoiId: number;
   dapAnId?: number | null;
+  dapAnIds?: number[] | null;
   cauTraLoiText?: string | null;
   thuTuTokenIds?: number[] | null;
   thoiGianTraLoi: number;
@@ -181,9 +183,12 @@ export interface CauHoiReviewDTO {
   noiDungCauHoi: string;
   hinhAnh: string | null;
   loaiCauHoi?: 'TRAC_NGHIEM' | 'DIEN_TU' | 'SAP_XEP';
+  nhieuDapAn?: boolean;
   danhSachDapAn: DapAnChoiDTO[];
   dapAnDaChonId: number | null;
   dapAnDungId: number | null;
+  dapAnDungIds?: number[] | null;
+  dapAnDaChonIds?: number[] | null;
   cauTraLoiText?: string | null;
   dapAnDungText?: string | null;
   thuTuTokenIdsDaChon?: number[] | null;

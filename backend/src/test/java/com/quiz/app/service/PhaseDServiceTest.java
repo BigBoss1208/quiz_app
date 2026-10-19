@@ -44,7 +44,7 @@ class PhaseDServiceTest {
         for(var kind:CauHoi.LoaiCauHoi.values()) {
             CauHoi q=question(kind);q.getDanhSachDapAn().get(0).setNoiDung(" ");assertThrows(ResponseStatusException.class,()->crud.them(q));
         }
-        CauHoi mc=question(CauHoi.LoaiCauHoi.TRAC_NGHIEM);mc.getDanhSachDapAn().get(1).setLaDapAnDung(true);assertThrows(ResponseStatusException.class,()->crud.them(mc));
+        CauHoi mc=question(CauHoi.LoaiCauHoi.TRAC_NGHIEM);mc.getDanhSachDapAn().forEach(a->a.setLaDapAnDung(false));assertThrows(ResponseStatusException.class,()->crud.them(mc));
         CauHoi tokens=question(CauHoi.LoaiCauHoi.SAP_XEP);tokens.getDanhSachDapAn().get(1).setThuTu(0);assertThrows(ResponseStatusException.class,()->crud.them(tokens));
         verify(questions,never()).save(any());
     }
@@ -68,7 +68,8 @@ class PhaseDServiceTest {
         }
     }
     @Test void legacyExcelAndEveryNewTemplateRoundTripWithoutPersistence() throws Exception {
-        var legacy=imports.preview(new MockMultipartFile("file","old.xlsx","",new ExcelCauHoiService().taoFileMauExcel()),1L);assertEquals(3,legacy.questions().size());assertTrue(legacy.warnings().isEmpty());
+        var legacy=imports.preview(new MockMultipartFile("file","old.xlsx","",new ExcelCauHoiService().taoFileMauExcel()),1L);assertEquals(4,legacy.questions().size());assertTrue(legacy.warnings().isEmpty());
+        assertEquals(2,legacy.questions().get(3).getDanhSachDapAn().stream().filter(DapAn::getLaDapAnDung).count());
         for(String format:List.of("xlsx","docx")) for(var kind:CauHoi.LoaiCauHoi.values()) {
             var preview=imports.preview(new MockMultipartFile("file","test."+format,"",imports.template(format,kind.name())),1L);
             assertEquals(1,preview.questions().size());assertTrue(preview.warnings().isEmpty(),preview.warnings().toString());assertEquals(kind,preview.questions().get(0).getLoaiCauHoi());QuestionValidator.validate(preview.questions().get(0));

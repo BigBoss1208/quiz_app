@@ -250,8 +250,8 @@ export default function ResultScreen({ topicId, result, onReplay, onHome, onLead
           <div className="space-y-4">
 
             {result.danhSachCauHoi.map((question, index) => {
-              const correctAnswer = question.danhSachDapAn.find((answer) => answer.id === question.dapAnDungId);
-              const selectedAnswer = question.danhSachDapAn.find((answer) => answer.id === question.dapAnDaChonId);
+              const correctAnswer = question.danhSachDapAn.find((answer) => (question.dapAnDungIds ?? [question.dapAnDungId]).includes(answer.id));
+              const selectedAnswer = question.danhSachDapAn.find((answer) => (question.dapAnDaChonIds ?? [question.dapAnDaChonId]).includes(answer.id));
 
               const status = question.ketQua === 'DUNG'
                 ? { label: 'Trả lời đúng', icon: '✓', color: '#00D9A5' }
@@ -277,8 +277,8 @@ export default function ResultScreen({ topicId, result, onReplay, onHome, onLead
                 selectedText = userTokens || 'Người học chưa sắp xếp câu.';
                 correctText = correctTokens || 'Không có dữ liệu đáp án đúng.';
               } else {
-                selectedText = selectedAnswer?.noiDung ?? 'Người học chưa chọn đáp án.';
-                correctText = correctAnswer?.noiDung ?? 'Không có dữ liệu đáp án đúng.';
+                selectedText = (question.cauTraLoiText || selectedAnswer?.noiDung) ?? 'Người học chưa chọn đáp án.';
+                correctText = (question.dapAnDungText || correctAnswer?.noiDung) ?? 'Không có dữ liệu đáp án đúng.';
               }
 
               const context: ChatQuestionContext = {
@@ -376,8 +376,8 @@ export default function ResultScreen({ topicId, result, onReplay, onHome, onLead
                   {(question.loaiCauHoi === 'TRAC_NGHIEM' || !question.loaiCauHoi) && (
                     <ul className="space-y-2">
                       {question.danhSachDapAn.map((answer, answerIndex) => {
-                        const isCorrect = answer.id === question.dapAnDungId;
-                        const isSelected = answer.id === question.dapAnDaChonId;
+                        const isCorrect = (question.dapAnDungIds ?? [question.dapAnDungId]).includes(answer.id);
+                        const isSelected = (question.dapAnDaChonIds ?? [question.dapAnDaChonId]).includes(answer.id);
                         return (
                           <li key={answer.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl px-3 py-2 text-sm"
                             style={{

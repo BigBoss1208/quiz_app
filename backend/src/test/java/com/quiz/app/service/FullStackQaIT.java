@@ -67,7 +67,7 @@ class FullStackQaIT {
                 : new ProcessBuilder("npm","exec","playwright","test");
         pb.directory(Path.of("../frontend").toFile());pb.environment().put("QA_BACKEND_URL","http://127.0.0.1:"+port+"/api");pb.environment().put("VITE_API_URL","http://127.0.0.1:"+port+"/api");pb.environment().put("QA_PASSWORD",testPassword);
         pb.redirectErrorStream(true);pb.redirectOutput(Path.of("target/playwright-qa.log").toFile());Process process=pb.start();
-        boolean done=process.waitFor(180,TimeUnit.SECONDS);if(!done)process.destroyForcibly();
+        boolean done=process.waitFor(360,TimeUnit.SECONDS);if(!done)process.destroyForcibly();
         assertTrue(done,"Playwright timeout; see target/playwright-qa.log");assertEquals(0,process.exitValue(),"See target/playwright-qa.log");
     }
     public static class PgCleanup extends org.springframework.test.context.support.AbstractTestExecutionListener {

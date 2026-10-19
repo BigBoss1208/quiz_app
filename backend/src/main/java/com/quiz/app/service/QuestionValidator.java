@@ -18,7 +18,7 @@ public final class QuestionValidator {
         if (q.getThuTu() != null && q.getThuTu() < 0) fail("Thứ tự không được âm");
         switch (q.getLoaiCauHoi()) {
             case TRAC_NGHIEM -> {
-                if (answers.size() != 4 || answers.stream().filter(a -> Boolean.TRUE.equals(a.getLaDapAnDung())).count() != 1) fail("Trắc nghiệm cần 4 lựa chọn và đúng 1 đáp án đúng");
+                if (answers.size() != 4 || answers.stream().noneMatch(a -> Boolean.TRUE.equals(a.getLaDapAnDung()))) fail("Trắc nghiệm cần 4 lựa chọn và ít nhất 1 đáp án đúng");
             }
             case DIEN_TU -> {
                 if (answers.stream().anyMatch(a -> !Boolean.TRUE.equals(a.getLaDapAnDung()))) fail("Mọi đáp án điền từ phải là đáp án được chấp nhận");
@@ -33,4 +33,15 @@ public final class QuestionValidator {
         }
     }
     private static void fail(String message) { throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message); }
+
+    public static Set<String> parseCorrectLetters(String value) {
+        String normalized = value == null ? "" : value.trim().toUpperCase(Locale.ROOT);
+        if (!normalized.matches("[A-D](?:\\s*[,;|]\\s*[A-D])*")) {
+            fail("Đáp án đúng phải là A/B/C/D; nhiều đáp án dùng A,C");
+        }
+        List<String> letters = Arrays.asList(normalized.split("\\s*[,;|]\\s*"));
+        Set<String> result = new LinkedHashSet<>(letters);
+        if (result.size() != letters.size()) fail("Đáp án đúng không được trùng");
+        return result;
+    }
 }

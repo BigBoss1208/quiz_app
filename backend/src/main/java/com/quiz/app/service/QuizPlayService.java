@@ -48,7 +48,7 @@ public class QuizPlayService {
                 .sorted(Comparator.comparing(a -> a.getThuTu() == null ? 0 : a.getThuTu())).toList();
         if (q.getLoaiCauHoi() == CauHoi.LoaiCauHoi.DIEN_TU && correct.isEmpty()) correct = q.getDanhSachDapAn();
         boolean valid = switch (q.getLoaiCauHoi()) {
-            case TRAC_NGHIEM -> correct.stream().anyMatch(a -> a.getId().equals(input.getDapAnId()));
+            case TRAC_NGHIEM -> new HashSet<>(selectedChoices(q, input)).equals(correct.stream().map(DapAn::getId).collect(Collectors.toSet()));
             case DIEN_TU -> correct.stream().anyMatch(a -> normalizeText(a.getNoiDung()).equalsIgnoreCase(normalizeText(input.getCauTraLoiText())));
             case SAP_XEP -> correct.stream().map(DapAn::getId).toList().equals(input.getThuTuTokenIds());
         };
@@ -92,7 +92,8 @@ public class QuizPlayService {
                     cauHoi.getNoiDungCauHoi(),
                     cauHoi.getHinhAnh(),
                     loai.name(),
-                    dapAnDTO
+                    dapAnDTO,
+                    loai == CauHoi.LoaiCauHoi.TRAC_NGHIEM && cauHoi.getDanhSachDapAn().stream().filter(a -> Boolean.TRUE.equals(a.getLaDapAnDung())).count() > 1
             );
         }).collect(Collectors.toList());
     }
@@ -113,7 +114,7 @@ public class QuizPlayService {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Câu hỏi chưa có đáp án đúng"));
 
-        boolean dung = dapAnDung.getId().equals(dapAnDaChonId);
+        boolean dung = cauHoi.getDanhSachDapAn().stream().filter(a -> Boolean.TRUE.equals(a.getLaDapAnDung())).count() == 1 && dapAnDung.getId().equals(dapAnDaChonId);
 
         List<CauHoi> danhSachSapXep = cauHoiRepository.findByChuDeIdOrderByThuTuAsc(cauHoi.getChuDe().getId());
         boolean laCauCuoi = !danhSachSapXep.isEmpty()
@@ -237,35 +238,23 @@ public class QuizPlayService {
 
             } else {
                 // ===== CHẤM ĐIỂM CÂU TRẮC NGHIỆM TRUYỀN THỐNG =====
-                dapAnDaChonId = traLoi != null ? traLoi.getDapAnId() : null;
-                DapAn dapAnDung = cauHoi.getDanhSachDapAn().stream()
-                        .filter(da -> Boolean.TRUE.equals(da.getLaDapAnDung()))
-                        .findFirst()
-                        .orElseThrow(() -> new ResponseStatusException(
-                                HttpStatus.CONFLICT, "Một câu hỏi chưa được cấu hình đáp án đúng."));
-                dapAnDungId = dapAnDung.getId();
-                dapAnDungText = dapAnDung.getNoiDung();
-
-                if (dapAnDaChonId == null) {
+                List<Long> selected = selectedChoices(cauHoi, traLoi);
+                List<DapAn> correct = cauHoi.getDanhSachDapAn().stream().filter(a -> Boolean.TRUE.equals(a.getLaDapAnDung())).toList();
+                if (correct.isEmpty()) throw new ResponseStatusException(HttpStatus.CONFLICT, "Câu hỏi chưa được cấu hình đáp án đúng.");
+                dapAnDaChonId = selected.size() == 1 ? selected.get(0) : null;
+                dapAnDungId = correct.size() == 1 ? correct.get(0).getId() : null;
+                dapAnDungText = correct.stream().map(DapAn::getNoiDung).collect(Collectors.joining(" / "));
+                cauTraLoiText = cauHoi.getDanhSachDapAn().stream().filter(a -> selected.contains(a.getId())).map(DapAn::getNoiDung).collect(Collectors.joining(" / "));
+                if (selected.isEmpty()) {
                     soCauChuaTraLoi++;
                     ketQua = "CHUA_TRA_LOI";
+                } else if (new HashSet<>(selected).equals(correct.stream().map(DapAn::getId).collect(Collectors.toSet()))) {
+                    soCauDung++;
+                    ketQua = "DUNG";
+                    diemSo += DIEM_MOI_CAU_DUNG + (THOI_GIAN_MOI_CAU_GIAY - thoiGianTraLoi) * DIEM_THUONG_MOI_GIAY;
                 } else {
-                    final Long selectedId = dapAnDaChonId;
-                    DapAn dapAnDaChon = cauHoi.getDanhSachDapAn().stream()
-                            .filter(da -> da.getId().equals(selectedId))
-                            .findFirst()
-                            .orElseThrow(() -> new ResponseStatusException(
-                                    HttpStatus.BAD_REQUEST, "Đáp án đã chọn không thuộc câu hỏi."));
-                    cauTraLoiText = dapAnDaChon.getNoiDung();
-
-                    if (Boolean.TRUE.equals(dapAnDaChon.getLaDapAnDung())) {
-                        soCauDung++;
-                        ketQua = "DUNG";
-                        diemSo += DIEM_MOI_CAU_DUNG + (THOI_GIAN_MOI_CAU_GIAY - thoiGianTraLoi) * DIEM_THUONG_MOI_GIAY;
-                    } else {
-                        soCauSai++;
-                        ketQua = "SAI";
-                    }
+                    soCauSai++;
+                    ketQua = "SAI";
                 }
             }
 
@@ -285,6 +274,10 @@ public class QuizPlayService {
             itemReview.setDapAnDungText(dapAnDungText);
             itemReview.setThuTuTokenIdsDaChon(thuTuTokenIdsDaChon);
             itemReview.setThuTuTokenIdsDung(thuTuTokenIdsDung);
+            if (loai == CauHoi.LoaiCauHoi.TRAC_NGHIEM) {
+                itemReview.setDapAnDaChonIds(selectedChoices(cauHoi, traLoi));
+                itemReview.setDapAnDungIds(cauHoi.getDanhSachDapAn().stream().filter(a -> Boolean.TRUE.equals(a.getLaDapAnDung())).map(DapAn::getId).toList());
+            }
             itemReview.setKetQua(ketQua);
             itemReview.setGiaiThich(cauHoi.getGiaiThich());
 
@@ -314,6 +307,19 @@ public class QuizPlayService {
                 Math.max(0, request.getThoiGianLam()),
                 Boolean.FALSE.equals(chuDe.getHienDapAnSauNop()) ? Collections.emptyList() : review
         );
+    }
+
+    private static List<Long> selectedChoices(CauHoi q, NopBaiRequestDTO.CauTraLoiDTO input) {
+        if (input == null) return Collections.emptyList();
+        List<Long> selected = input.getDapAnIds() != null ? input.getDapAnIds()
+                : input.getDapAnId() == null ? Collections.emptyList() : List.of(input.getDapAnId());
+        if (selected.size() > 4 || selected.stream().anyMatch(Objects::isNull)
+                || new HashSet<>(selected).size() != selected.size()
+                || !q.getDanhSachDapAn().stream().map(DapAn::getId).collect(Collectors.toSet()).containsAll(selected)
+                || (input.getDapAnIds() != null && input.getDapAnId() != null && !selected.equals(List.of(input.getDapAnId())))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Danh sách đáp án đã chọn không hợp lệ hoặc không thuộc câu hỏi.");
+        }
+        return selected;
     }
 
     // Chuẩn hóa văn bản điền từ: Unicode NFC, bỏ khoảng trắng thừa, giữ nguyên dấu tiếng Việt & thanh điệu Pinyin

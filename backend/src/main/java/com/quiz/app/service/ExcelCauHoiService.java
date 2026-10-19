@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Service xử lý tạo file template mẫu và đọc dữ liệu từ file Excel (.xlsx) bằng Apache POI.
@@ -24,10 +23,9 @@ public class ExcelCauHoiService {
             "Đáp án B",
             "Đáp án C",
             "Đáp án D",
-            "Đáp án đúng (A/B/C/D)"
+            "Đáp án đúng (A hoặc A,C)"
     };
 
-    private static final Set<String> VALID_ANSWERS = Set.of("A", "B", "C", "D");
 
     /**
      * Tạo file Excel mẫu (.xlsx) chuẩn gồm Header và dữ liệu ví dụ.
@@ -83,7 +81,8 @@ public class ExcelCauHoiService {
             String[][] sampleData = {
                     {"Thủ đô của Việt Nam là thành phố nào?", "Hà Nội", "Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "A"},
                     {"Số nguyên tố chẵn duy nhất là số nào?", "0", "2", "4", "6", "B"},
-                    {"Mặt trời mọc ở hướng nào?", "Hướng Tây", "Hướng Nam", "Hướng Đông", "Hướng Bắc", "C"}
+                    {"Mặt trời mọc ở hướng nào?", "Hướng Tây", "Hướng Nam", "Hướng Đông", "Hướng Bắc", "C"},
+                    {"Chọn tất cả số chẵn", "2", "3", "4", "5", "A,C"}
             };
 
             for (int r = 0; r < sampleData.length; r++) {
@@ -169,9 +168,8 @@ public class ExcelCauHoiService {
                 if (dapAnA.isEmpty() || dapAnB.isEmpty() || dapAnC.isEmpty() || dapAnD.isEmpty()) {
                     loiDong.add("Phải nhập đủ cả 4 đáp án (A, B, C, D)");
                 }
-                if (!VALID_ANSWERS.contains(dapAnDung)) {
-                    loiDong.add("Đáp án đúng '" + dapAnDung + "' không hợp lệ (chỉ chấp nhận A, B, C hoặc D)");
-                }
+                try { QuestionValidator.parseCorrectLetters(dapAnDung); }
+                catch (org.springframework.web.server.ResponseStatusException e) { loiDong.add(e.getReason()); }
 
                 if (!loiDong.isEmpty()) {
                     danhSachLoi.add("Dòng " + displayRowNum + ": " + String.join(", ", loiDong));
