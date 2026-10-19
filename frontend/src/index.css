@@ -1363,6 +1363,10 @@ body {
 .phase-d input:not([type=checkbox]):not([type=radio]), .phase-d textarea { width: 100%; }
 .phase-d textarea { min-height: 108px; resize: vertical; }
 .phase-d select { min-height: 44px; }
+/* Native dropdown popups need their own palette on Windows/Chrome. */
+.admin-shell select { color-scheme: dark; }
+.admin-shell select option,
+.admin-shell select optgroup { background-color: #141c32; color: #eef0ff; }
 .phase-d label { color: #c8cde5; font-size: 13px; }
 .phase-d input[type=checkbox], .phase-d input[type=radio] { accent-color: #7956ff; }
 .phase-d input:focus-visible, .phase-d select:focus-visible, .phase-d textarea:focus-visible { outline: 2px solid #9d85ff; outline-offset: 2px; }
