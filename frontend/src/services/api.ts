@@ -22,11 +22,11 @@ export const xoaNhomMon = (id: number) => request<void>(`/admin/nhom-mon/${id}`,
 export const xacNhanImport = (questions: CauHoiAdmin[]) => request<number>('/admin/import/confirm', { method: 'POST', body: JSON.stringify(questions) });
 export async function xemTruocImport(file: File, chuDeId: number): Promise<{ questions: CauHoiAdmin[]; warnings: string[] }> {
   const form = new FormData(); form.append('file', file); form.append('chuDeId', String(chuDeId));
-  const res = await fetch(`${BASE_URL}/admin/import/preview`, { method: 'POST', headers: { Authorization: `Bearer ${layAuth()?.token || ''}` }, body: form });
+  const res = await apiFetch(`${BASE_URL}/admin/import/preview`, { method: 'POST', headers: { Authorization: `Bearer ${layAuth()?.token || ''}` }, body: form });
   if (!res.ok) throw new Error(await res.text()); return res.json();
 }
 export async function taiMauImport(format: string, type: string) {
-  const res = await fetch(`${BASE_URL}/admin/import/template?format=${format}&type=${type}`, { headers: { Authorization: `Bearer ${layAuth()?.token || ''}` } });
+  const res = await apiFetch(`${BASE_URL}/admin/import/template?format=${format}&type=${type}`, { headers: { Authorization: `Bearer ${layAuth()?.token || ''}` } });
   if (!res.ok) throw new Error(await res.text());
   const url = URL.createObjectURL(await res.blob()); const a = document.createElement('a'); a.href = url; a.download = `questions-${type}.${format}`; a.click(); URL.revokeObjectURL(url);
 }
@@ -36,7 +36,14 @@ export function layAuth(): AuthUser | null {
     const raw = localStorage.getItem(AUTH_KEY);
     if (!raw) return null;
     const user = JSON.parse(raw);
-    return user && typeof user.token === 'string' && typeof user.id === 'number' && ['ADMIN','USER'].includes(user.vaiTro) ? user : null;
+    if (!user || typeof user.token !== 'string' || typeof user.id !== 'number' || !['ADMIN','USER'].includes(user.vaiTro)) return null;
+    const payload = JSON.parse(atob(user.token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    if (typeof payload.exp !== 'number' || payload.exp * 1000 <= Date.now()) {
+      localStorage.removeItem(AUTH_KEY);
+      return null;
+    }
+    // This expiry check is UX only; Backend still verifies the signature and role.
+    return user;
   } catch { return null; }
 }
 
@@ -48,10 +55,22 @@ export function xoaAuth() {
   localStorage.removeItem(AUTH_KEY);
 }
 
+async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  const auth = layAuth();
+  const res = await fetch(url, options);
+  if (!url.includes('/auth/') && (res.status === 401 || (res.status === 403 && (!auth || auth.vaiTro === 'ADMIN')))) {
+    // Never replay a failed write automatically. Preserve the role checks on the server.
+    xoaAuth();
+    window.dispatchEvent(new Event('quiz-session-expired'));
+    throw new Error('Phiên đăng nhập đã hết hạn hoặc không còn hợp lệ. Vui lòng đăng nhập lại.');
+  }
+  return res;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const auth = layAuth();
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await apiFetch(`${BASE_URL}${path}`, {
     headers: {
       'Content-Type': 'application/json',
       ...(auth ? { Authorization: `Bearer ${auth.token}` } : {}),
@@ -229,7 +248,9 @@ export interface ImportExcelResultDTO {
 // ===== Chủ đề =====
 
 export const layDanhSachChuDeThongKe = () =>
-  request<ChuDeThongKeDTO[]>('/chude/thongke');
+  request<ChuDeThongKeDTO[]>('/chude/thongke', {
+    signal: AbortSignal.timeout(20_000),
+  });
 
 export const layChuDe = (id: number | string) =>
   request<ChuDeDTO>(`/chude/${id}`);
@@ -287,7 +308,7 @@ export const xoaCauHoi = (id: number) =>
 
 export const taiFileMauExcel = async () => {
   const auth = layAuth();
-  const res = await fetch(`${BASE_URL}/cauhoi/template-excel`, {
+  const res = await apiFetch(`${BASE_URL}/cauhoi/template-excel`, {
     headers: {
       ...(auth ? { Authorization: `Bearer ${auth.token}` } : {}),
     },
@@ -317,7 +338,7 @@ export const importCauHoiExcel = async (
   formData.append('file', file);
   formData.append('chuDeId', String(chuDeId));
 
-  const res = await fetch(`${BASE_URL}/cauhoi/import-excel`, {
+  const res = await apiFetch(`${BASE_URL}/cauhoi/import-excel`, {
     method: 'POST',
     headers: {
       ...(auth ? { Authorization: `Bearer ${auth.token}` } : {}),

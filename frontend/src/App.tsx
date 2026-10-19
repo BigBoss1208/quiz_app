@@ -76,7 +76,7 @@ export default function App() {
       })
       .catch(() => {
         setLoadError(
-          'Không tải được danh sách chủ đề. Kiểm tra kết nối Backend.'
+          'Máy chủ đang khởi động hoặc chưa phản hồi. Vui lòng thử lại sau ít giây.'
         );
       })
       .finally(() => {
@@ -86,6 +86,17 @@ export default function App() {
 
   useEffect(() => {
     loadTopics();
+  }, []);
+
+  useEffect(() => {
+    const expireSession = () => {
+      setCurrentUser(null);
+      setLastResult(null);
+      setAfterLoginGoTo('home');
+      setScreen('login');
+    };
+    window.addEventListener('quiz-session-expired', expireSession);
+    return () => window.removeEventListener('quiz-session-expired', expireSession);
   }, []);
 
   // Bắt đầu bài Quiz mới
@@ -165,8 +176,9 @@ export default function App() {
         className="min-h-screen flex items-center justify-center"
         style={{ background: '#0f0c29' }}
       >
-        <p className="text-white/60 font-bold">
+        <p role="status" className="text-white/60 font-bold text-center px-6">
           Đang tải dữ liệu...
+          <span className="block mt-2 text-sm font-normal">Lần truy cập đầu, máy chủ có thể cần thêm thời gian để khởi động.</span>
         </p>
       </div>
     );
