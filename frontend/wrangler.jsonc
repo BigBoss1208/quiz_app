@@ -1,7 +1,15 @@
 {
   "name": "quiz-app",
   "compatibility_date": "2024-09-23",
+  "main": "worker/index.mjs",
+  "vars": {
+    "ANALYTICS_ENABLED": "true",
+    "ANALYTICS_GROUP_ID": "01",
+    "ANALYTICS_INGEST_URL": "https://f8fb6f6f730b404fb2f273fd789d04df.ingest.cloudflare.com"
+  },
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true
   }
 }

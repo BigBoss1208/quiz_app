@@ -1,6 +1,7 @@
 # Frontend
 frontend/node_modules
 frontend/dist
+frontend/.wrangler/
 .m2/
 frontend/test-results/
 frontend/playwright-report/

@@ -8,6 +8,7 @@ import {
   type ChuDeThongKeDTO,
 } from "../services/api";
 import StudyChatWidget from "../components/StudyChatWidget";
+import AnalyticsPrivacy from "../components/AnalyticsPrivacy";
 import "./HomeScreen.css";
 
 interface Props {
@@ -562,6 +563,7 @@ export default function HomeScreen({
         </div>
         <div className="home-footer-bottom home-container">
           © {new Date().getFullYear()} Quiz ManhNhom. Học mà chơi, chơi mà học.
+          <AnalyticsPrivacy />
         </div>
       </footer>
       <StudyChatWidget />
